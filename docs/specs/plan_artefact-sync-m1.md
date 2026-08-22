@@ -94,7 +94,7 @@ early.
   `tests.helpers.make_repo(tmp, files: dict[str, bytes]) -> Path`, which returns a real
   `git init`-ed repo with one commit.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```python
 # tests/test_stdlib_only.py
@@ -142,12 +142,12 @@ class StdlibOnlyTests(unittest.TestCase):
         self.assertEqual([], missing)
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `python3 -m unittest discover -s tests -t . -v`
 Expected: FAIL — `artefact_sync` package does not exist yet.
 
-- [ ] **Step 3: Write minimal implementation**
+- [x] **Step 3: Write minimal implementation**
 
 ```python
 # artefact_sync/__init__.py
@@ -222,12 +222,12 @@ def make_repo(tmp: Path, files: dict[str, bytes]) -> Path:
 
 Create empty `tests/__init__.py`.
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `python3 -m unittest discover -s tests -t . -v`
 Expected: PASS, 2 tests.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add artefact_sync tests
@@ -257,7 +257,7 @@ git commit -m "feat: package skeleton, error types, stdlib-only guard"
 Wholly new code — the prior art derives its defaults from the script's own parent directory
 (`artefacts.py:2250-2269`), which after extraction points at the skill directory.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```python
 # tests/test_config.py
@@ -330,12 +330,12 @@ class ContextTests(unittest.TestCase):
         self.assertEqual(Path("/r/artefacts"), context.artefacts_root)
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `python3 -m unittest tests.test_config -v`
 Expected: FAIL — `No module named 'artefact_sync.config'`.
 
-- [ ] **Step 3: Write minimal implementation**
+- [x] **Step 3: Write minimal implementation**
 
 ```python
 # artefact_sync/config.py
@@ -434,7 +434,7 @@ def build_context(pointer: Pointer, site: Site) -> Context:
     )
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `python3 -m unittest tests.test_config -v`
 Expected: PASS, 8 tests.
@@ -473,7 +473,7 @@ git commit -m "feat(config): pointer file, site block, Context resolution"
 `description` and `date` (`artefacts.py:112-120` has neither, and `manifest_from_dict` drops unknown
 keys, so today the worked example is silently stripped); `Manifest` gains `site`.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```python
 # tests/test_manifest.py
@@ -584,12 +584,12 @@ class ExtensionTests(unittest.TestCase):
             m.validate_manifest(m.manifest_from_dict(body))
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `python3 -m unittest tests.test_manifest -v`
 Expected: FAIL — `No module named 'artefact_sync.manifest'`.
 
-- [ ] **Step 3: Write minimal implementation**
+- [x] **Step 3: Write minimal implementation**
 
 Port `artefacts.py:100-446` and `artefacts.py:1394-1433` into `artefact_sync/manifest.py`, replacing
 the module-level constants with the block below and threading `site` through
@@ -699,7 +699,7 @@ def load_manifest(artefacts_root: Path) -> Manifest:
 `"site": site_to_dict(m.site)` as the second key, after `version`. Keep the prior art's key order for
 everything else so a re-serialised manifest diffs cleanly.
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `python3 -m unittest tests.test_manifest -v`
 Expected: PASS, 11 tests.
@@ -732,7 +732,7 @@ invariant today. `validate_manifest` (`artefacts.py:335-392`) checks shape and u
 compares against HEAD, and the planner (`artefacts.py:1538-1556`) silently treats a changed
 `destination` as add-new plus delete-old.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```python
 # tests/test_manifest_invariants.py
@@ -809,12 +809,12 @@ class HeadManifestTests(unittest.TestCase):
             self.assertIsNone(m.head_manifest(repo))
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `python3 -m unittest tests.test_manifest_invariants -v`
 Expected: FAIL — `module 'artefact_sync.manifest' has no attribute 'check_published_invariants'`.
 
-- [ ] **Step 3: Write minimal implementation**
+- [x] **Step 3: Write minimal implementation**
 
 ```python
 # append to artefact_sync/manifest.py
@@ -862,7 +862,7 @@ def check_published_invariants(current: Manifest, head: Manifest | None) -> None
         raise ValidationError("\n".join(problems))
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `python3 -m unittest tests.test_manifest_invariants -v`
 Expected: PASS, 7 tests.
@@ -897,7 +897,7 @@ anything. Second, `is_ignored` (`artefacts.py:488-493`) is exact-match or litera
 it gains `fnmatch`, without which the seeded `*.local.*` rule matches nothing and publishes the files
 it was meant to hide.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```python
 # tests/test_scan.py
@@ -968,12 +968,12 @@ class IgnoreTests(unittest.TestCase):
         self.assertIn(("never-matches/", 0), counts)
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `python3 -m unittest tests.test_scan -v`
 Expected: FAIL — `No module named 'artefact_sync.scan'`.
 
-- [ ] **Step 3: Write minimal implementation**
+- [x] **Step 3: Write minimal implementation**
 
 ```python
 # artefact_sync/scan.py
@@ -1069,7 +1069,7 @@ def apply_source_ignores(
     return replace(inventory, approved=kept), counts
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `python3 -m unittest tests.test_scan -v`
 Expected: PASS, 9 tests.
@@ -1098,7 +1098,7 @@ Per spec D3 this is a validator, never a rewriter: it refuses and names the line
 ships is byte-identical to the file on disk. Nothing in the prior art does this — `.svg` is not even
 an approved extension there (`artefacts.py:25-26`).
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```python
 # tests/test_svg.py
@@ -1177,12 +1177,12 @@ class SvgValidatorTests(unittest.TestCase):
         self.assertIn("d/x.svg:3", message)
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `python3 -m unittest tests.test_svg -v`
 Expected: FAIL — `cannot import name 'validate_svg'`.
 
-- [ ] **Step 3: Write minimal implementation**
+- [x] **Step 3: Write minimal implementation**
 
 ```python
 # append to artefact_sync/scan.py
@@ -1229,7 +1229,7 @@ def validate_svg(data: bytes, label: str) -> None:
         )
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `python3 -m unittest tests.test_svg -v`
 Expected: PASS, 11 tests.
@@ -1266,7 +1266,7 @@ unchanged — it is what makes the round trip work. Two deltas. The 219-line bra
 the CSS forced and makes the asset a real, openable HTML file. Placeholders: `$title`, `$favicon`,
 `$prefix`, `$vendor`, `$markdown`, `$block_start`, `$block_end`.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```python
 # tests/test_render_markdown.py
@@ -1353,12 +1353,12 @@ class TemplateTests(unittest.TestCase):
         self.assertIn("../../vendor/marked.min.js", page)
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `python3 -m unittest tests.test_render_markdown -v`
 Expected: FAIL — `No module named 'artefact_sync.render'`.
 
-- [ ] **Step 3: Write minimal implementation**
+- [x] **Step 3: Write minimal implementation**
 
 Create `artefact_sync/assets/page-template.html` by copying `artefacts.py:587-805`, then:
 un-double every `{{`/`}}` back to `{`/`}`; replace `{title}` with `$title` and the same for the other
@@ -1435,7 +1435,7 @@ def render_markdown_page(
     return document.encode("utf-8")
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `python3 -m unittest tests.test_render_markdown -v`
 Expected: PASS, 9 tests.
@@ -1468,7 +1468,7 @@ across unchanged. One delta, per spec E4: the cdnjs-specific rejection (`artefac
 off-site reference for `plan` to warn about and blocks none. The old rule blocked one CDN by raw
 substring while permitting every other remote host.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```python
 # tests/test_render_html.py
@@ -1541,12 +1541,12 @@ class ExternalReferenceTests(unittest.TestCase):
         self.assertEqual(1, len(render.external_references('<script src="//cdn.example/x.js">\n')))
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `python3 -m unittest tests.test_render_html -v`
 Expected: FAIL — `module 'artefact_sync.render' has no attribute 'transform_html'`.
 
-- [ ] **Step 3: Write minimal implementation**
+- [x] **Step 3: Write minimal implementation**
 
 Port `ensure_favicon` and `transform_html` from `artefacts.py:1208-1244`, deleting the cdnjs check,
 and add:
@@ -1579,7 +1579,7 @@ def external_references(html_text: str) -> tuple[tuple[int, str], ...]:
 through `render_markdown_page`, everything else a byte copy. SVG sources are byte copies too — they
 are validated in `scan`, never rewritten.
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `python3 -m unittest tests.test_render_html -v`
 Expected: PASS, 8 tests.
@@ -1614,7 +1614,7 @@ has no marker pair (`artefacts.py:1380-1391`, `1504-1516`), so a repo holding on
 run. And `collect_source_timestamps` (`artefacts.py:1286-1304`) is deleted: dates come from the
 manifest per spec E1, not from live source mtime.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```python
 # tests/test_catalogue.py
@@ -1704,12 +1704,12 @@ class SortTests(unittest.TestCase):
         self.assertNotIn("<b>", fragment)
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `python3 -m unittest tests.test_catalogue -v`
 Expected: FAIL — `No module named 'artefact_sync.catalogue'`.
 
-- [ ] **Step 3: Write minimal implementation**
+- [x] **Step 3: Write minimal implementation**
 
 Port `render_catalogue` and `replace_generated_catalogue` from `artefacts.py:1307-1391`, dropping the
 site CSS class names for neutral ones and taking dates from `entry.date` rather than a timestamp side
@@ -1736,7 +1736,7 @@ def _invert(stamp: str) -> str:
     return "".join(chr(ord("9") - int(c)) if c.isdigit() else c for c in stamp)
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `python3 -m unittest tests.test_catalogue -v`
 Expected: PASS, 8 tests.
@@ -1774,7 +1774,7 @@ disappeared source drops its entry and a fresh destination is derived from the n
 a live URL. The rename test that passes today only passes because a `.md` → `.html` change happens to
 derive the same slug.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```python
 # tests/test_propose.py
@@ -1856,12 +1856,12 @@ Replace the placeholder `ProposalTests` body with a real assertion once
 missing, pass a rename mapping, and assert the resulting entry keeps the old `destination` while
 taking the new `source`.
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `python3 -m unittest tests.test_propose -v`
 Expected: FAIL — `No module named 'artefact_sync.propose'`.
 
-- [ ] **Step 3: Write minimal implementation**
+- [x] **Step 3: Write minimal implementation**
 
 ```python
 # artefact_sync/propose.py — the new part; suggest_destination ports from artefacts.py:897-910
@@ -1912,7 +1912,7 @@ def detect_renames(
 and consults `renames` before calling `suggest_destination`: a source in the rename map reuses the
 existing entry (new `source`, unchanged `id`, `destination` and `title`) instead of creating one.
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `python3 -m unittest tests.test_propose -v`
 Expected: PASS, 7 tests.
@@ -1950,7 +1950,7 @@ it cannot print a URL or a size); `orphan` leaves the deletion set and becomes a
 (`artefacts.py:31-32` currently deletes orphans); and `format_plan` groups by consequence rather
 than by operation (`artefacts.py:1616-1654`).
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```python
 # tests/test_plan.py
@@ -2021,12 +2021,12 @@ class GroupingTests(unittest.TestCase):
             self.assertLess(ord(char), 0x2190, f"non-ascii-art character {char!r}")
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `python3 -m unittest tests.test_plan -v`
 Expected: FAIL — `No module named 'artefact_sync.plan'`.
 
-- [ ] **Step 3: Write minimal implementation**
+- [x] **Step 3: Write minimal implementation**
 
 Port `_validate_desired_tree`, `scan_published_tree` and `create_sync_plan` from
 `artefacts.py:1436-1593`, then write the new formatter:
@@ -2096,7 +2096,7 @@ Secret-shape detection lives in `create_sync_plan`: run a small regex set (long 
 Emit `Note("external", ...)` from `render.external_references`, and `Note("size", ...)` for any add
 over 10 MB.
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `python3 -m unittest tests.test_plan -v`
 Expected: PASS, 8 tests.
@@ -2129,7 +2129,7 @@ rendered bytes to the rendered bytes it just computed (`artefacts.py:1713-1721`)
 nothing about the round trip despite the docstring at `artefacts.py:820-826` claiming apply depends
 on it.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```python
 # tests/test_apply.py
@@ -2193,12 +2193,12 @@ class ApplyTests(unittest.TestCase):
             self.assertTrue((root / "redirect.html").is_file())
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `python3 -m unittest tests.test_apply -v`
 Expected: FAIL — `No module named 'artefact_sync.apply'`.
 
-- [ ] **Step 3: Write minimal implementation**
+- [x] **Step 3: Write minimal implementation**
 
 ```python
 # artefact_sync/apply.py — the new part
@@ -2244,7 +2244,7 @@ def verify_markdown_round_trip(source_bytes: bytes, rendered: bytes, label: str)
 in `DELETION_KINDS`, re-reads each written file and compares to the desired bytes, and calls
 `verify_markdown_round_trip` for every entry whose source suffix is `.md`.
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `python3 -m unittest tests.test_apply -v`
 Expected: PASS, 6 tests.
