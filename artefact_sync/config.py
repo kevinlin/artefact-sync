@@ -33,6 +33,7 @@ class Context:
     source_root: Path
     artefacts_root: Path
     site: Site
+    push: str = "direct"
 
 
 def load_pointer(path: Path = POINTER_PATH) -> Pointer:
@@ -104,4 +105,5 @@ def build_context(pointer: Pointer, site: Site) -> Context:
         source_root=pointer.source.expanduser().resolve(),
         artefacts_root=repo_root / ARTEFACTS_DIRNAME,
         site=site,
+        push=pointer.push,
     )
