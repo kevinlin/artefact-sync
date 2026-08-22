@@ -93,10 +93,11 @@ def validate_svg(data: bytes, label: str) -> None:
     for reason, pattern in _SVG_RULES:
         for match in pattern.finditer(text):
             number = text.count("\n", 0, match.start()) + 1
-            problems.append(f"{label}:{number}: {reason} ({match.group(0).strip()!r})")
-    problems.sort()
+            message = f"{label}:{number}: {reason} ({match.group(0).strip()!r})"
+            problems.append((label, number, message))
+    problems.sort(key=lambda problem: (problem[0], problem[1]))
     if problems:
         raise ValidationError(
-            "\n".join(problems)
+            "\n".join(problem[2] for problem in problems)
             + "\nSVG must not contain scripts, event handlers, or external references."
         )

@@ -77,3 +77,14 @@ class SvgValidatorTests(unittest.TestCase):
         message = str(caught.exception)
         self.assertIn("d/x.svg:2", message)
         self.assertIn("d/x.svg:3", message)
+
+    def test_reports_problems_in_numeric_line_order(self) -> None:
+        data = (
+            b"<svg>\n<script/>\n"
+            + b"<rect/>\n" * 7
+            + b'<rect onclick="x()"/>\n</svg>\n'
+        )
+        with self.assertRaises(ValidationError) as caught:
+            validate_svg(data, "d/x.svg")
+        message = str(caught.exception)
+        self.assertLess(message.index("d/x.svg:2:"), message.index("d/x.svg:10:"))
