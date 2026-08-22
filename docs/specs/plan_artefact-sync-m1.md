@@ -439,7 +439,7 @@ def build_context(pointer: Pointer, site: Site) -> Context:
 Run: `python3 -m unittest tests.test_config -v`
 Expected: PASS, 8 tests.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add artefact_sync/config.py tests/test_config.py
