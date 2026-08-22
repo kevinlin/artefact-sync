@@ -1,2 +1,29 @@
-__pycache__/
-.partner/jobs/
+# Local secrets and credentials for the CLIs the skill spawns — never commit
+.env
+.env.*
+
+# Local-only Claude Code overrides (permissions, per-machine settings)
+.claude/settings.local.json
+
+# Symlink to CLAUDE.md for non-Claude agent hosts — local convenience only
+AGENTS.md
+
+# Python virtualenvs used to run the helper scripts
+.venv/
+venv/
+
+# Node deps for the localhost setup wizard tooling
+node_modules/
+
+# Python bytecode from scripts/ and tests/
+**/__pycache__/
+*.py[cod]
+
+# unittest / pytest run caches
+.pytest_cache/
+
+# Per-repo agent handoff runtime state: config, goal, jobs, receipts, handoffs, backups
+.partner/
+!.partner/config.toml
+.handoff/
+!.handoff/config.toml
