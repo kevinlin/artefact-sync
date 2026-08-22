@@ -156,8 +156,15 @@ def _local_reference(context: config.Context, page: Path, reference: str) -> Pat
 def validate_repository(
     context: config.Context, current: manifest.Manifest
 ) -> tuple[plan_module.Note, ...]:
+    catalogue_path = (
+        PurePosixPath(manifest.CATALOGUE_NAME)
+        if context.site.catalogue_mode == "standalone"
+        else context.site.catalogue_page
+    )
+    assert catalogue_path is not None
     expected = {
         *(PurePosixPath(name) for name in manifest.CONTROL_FILES),
+        catalogue_path,
         *current.protected_files,
         *(entry.destination for entry in current.entries),
     }
@@ -177,15 +184,12 @@ def validate_repository(
         for path in sorted(actual - expected, key=str)
     ]
 
-    catalogue_path = (
-        PurePosixPath(manifest.CATALOGUE_NAME)
-        if context.site.catalogue_mode == "standalone"
-        else context.site.catalogue_page
-    )
-    assert catalogue_path is not None
-    catalogue_document = (context.artefacts_root / catalogue_path.as_posix()).read_text(
-        encoding="utf-8"
-    )
+    try:
+        catalogue_document = (context.artefacts_root / catalogue_path.as_posix()).read_text(
+            encoding="utf-8"
+        )
+    except (OSError, UnicodeError) as error:
+        raise ValidationError(f"cannot read catalogue: {error}") from error
     href_counts = Counter(_parse_references(catalogue_document).hrefs)
     for entry in current.entries:
         href = catalogue.public_href(entry)

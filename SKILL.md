@@ -13,6 +13,12 @@ Run commands from the skill root:
 python3 -m artefact_sync <command>
 ```
 
+From another directory, point Python at the installed skill:
+
+```bash
+PYTHONPATH="$HOME/.claude/skills/artefact-sync" python3 -m artefact_sync <command>
+```
+
 ## Workflow
 
 1. Run `init --repo <path> --source <path>` once. It writes the machine-local pointer and creates missing control files without replacing an existing manifest.

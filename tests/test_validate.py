@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import tempfile
 import unittest
 from pathlib import Path
@@ -41,6 +42,15 @@ class ValidateTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             repo, _source, pointer = seeded(Path(tmp))
             (repo / "artefacts" / "vendor" / "marked.min.js").unlink()
+            self.assertEqual(cli.EXIT_ERROR, cli.main(["validate", "--pointer", str(pointer)]))
+
+    def test_a_missing_injected_catalogue_fails_cleanly(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo, _source, pointer = seeded(Path(tmp))
+            manifest_path = repo / "artefacts" / "manifest.json"
+            body = json.loads(manifest_path.read_text(encoding="utf-8"))
+            body["site"]["catalogue"] = {"mode": "inject", "page": "custom.html"}
+            manifest_path.write_text(json.dumps(body), encoding="utf-8")
             self.assertEqual(cli.EXIT_ERROR, cli.main(["validate", "--pointer", str(pointer)]))
 
 
