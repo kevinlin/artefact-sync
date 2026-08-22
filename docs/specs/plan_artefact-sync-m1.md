@@ -2662,7 +2662,7 @@ from Task 8. The load-bearing delta is spec E2: unmanaged files become warnings 
 Today `validate_repository` rejects every file outside the manifest destinations, so a warned-but-kept
 orphan would fail the gate that `publish` runs.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```python
 # tests/test_validate.py
@@ -2747,12 +2747,12 @@ an entry between runs. Add `--yes` to `sync` (skip the confirmation) and have th
 the proposed manifest, matching the prior art's two-step flow at `artefacts.py:2208-2247`: the first
 run writes only `manifest.json` and exits 3, the second run publishes the bytes.
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `python3 -m unittest tests.test_validate -v`
 Expected: FAIL — `module 'artefact_sync.cli' has no attribute 'command_validate'`.
 
-- [ ] **Step 3: Write minimal implementation**
+- [x] **Step 3: Write minimal implementation**
 
 Write `command_plan`, `command_sync` and `command_validate` in `cli.py`. Each calls
 `resolve_context`, `manifest.load_manifest`, then `manifest.check_published_invariants(current,
@@ -2761,12 +2761,12 @@ mutating path, not just `sync`. `command_sync` prints `format_plan`, asks for li
 `--yes` was passed, then calls `apply.apply_plan`. Add `--yes` to the `sync` subparser in
 `parse_args`.
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `python3 -m unittest tests.test_validate -v`
 Expected: PASS, 8 tests.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add artefact_sync/cli.py tests/test_validate.py
