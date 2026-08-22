@@ -1,15 +1,21 @@
 from __future__ import annotations
 
+import contextlib
+import io
+import json
 import tempfile
 import unittest
+from datetime import datetime
 from pathlib import Path, PurePosixPath
+from unittest import mock
 
-from artefact_sync import config, manifest, publish
+from artefact_sync import cli, config, manifest, plan as plan_module, publish
 from artefact_sync.config import site_from_dict
-from artefact_sync.errors import PublishError
+from artefact_sync.errors import PublishError, ValidationError
 from tests.helpers import RecordingFetcher, RecordingRunner, make_repo, make_source_tree
 
 BASE_URL = "https://someone.github.io/notes/artefacts/"
+PAGE = b"<html><head></head><body><h1>Cost model</h1></body></html>\n"
 
 
 def make_context(root: Path, push: str = "direct") -> config.Context:
@@ -25,6 +31,35 @@ def make_context(root: Path, push: str = "direct") -> config.Context:
         manifest.manifest_to_json(body), encoding="utf-8"
     )
     return config.Context(repo, source, artefacts, body.site, push)
+
+
+def make_publishing_world(root: Path, push: str = "direct", extra: dict | None = None):
+    """init, then one plan run, so the manifest holds a proposal and a file is waiting."""
+    repo = make_repo(root, {"README.md": b"x\n"})
+    source = make_source_tree(root, dict({"talk/cost-model.html": PAGE}, **(extra or {})))
+    pointer = root / "pointer.json"
+    with contextlib.redirect_stdout(io.StringIO()):
+        cli.main(["init", "--pointer", str(pointer),
+                  "--repo", str(repo), "--source", str(source)])
+        cli.main(["plan", "--pointer", str(pointer)])
+    body = manifest.load_manifest(repo / "artefacts")
+    context = config.Context(repo.resolve(), source.resolve(),
+                             repo.resolve() / "artefacts", body.site, push)
+    return context, body, pointer
+
+
+class _SnapshotRunner(RecordingRunner):
+    """Records whether a published file was on disk by the time staging ran."""
+
+    def __init__(self, target: Path, overrides: dict | None = None) -> None:
+        super().__init__(overrides)
+        self.target = target
+        self.existed_at_add = None
+
+    def __call__(self, args, cwd):
+        if args[:2] == ["git", "add"]:
+            self.existed_at_add = self.target.is_file()
+        return super().__call__(args, cwd)
 
 
 class PreflightTests(unittest.TestCase):
@@ -224,3 +259,193 @@ class VerifyPublicUrlsTests(unittest.TestCase):
         with self.assertRaises(PublishError) as caught:
             publish.verify_public_urls((BASE_URL,), RecordingFetcher(status=0))
         self.assertIn("no response", str(caught.exception))
+
+
+class PublishTests(unittest.TestCase):
+    def run_publish(self, context, current, runner=None, fetcher=None,
+                    answer: str = "yes", overrides: dict | None = None):
+        self.runner = runner or RecordingRunner(overrides)
+        self.fetcher = fetcher or RecordingFetcher()
+        self.prompt = []
+        self.output = io.StringIO()
+        with contextlib.redirect_stdout(self.output):
+            return publish.publish(
+                context, current, self.runner, self.fetcher,
+                confirm=lambda text: (self.prompt.append(text), answer)[1],
+                now=lambda: datetime(2026, 8, 23, 12, 0, 0),
+                sleeper=lambda _seconds: None,
+            )
+
+    def test_publishes_applies_validates_commits_pushes_waits_and_verifies(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            context, current, _pointer = make_publishing_world(Path(tmp))
+            page = context.artefacts_root / "talk" / "cost-model" / "index.html"
+            runner = _SnapshotRunner(page)
+            result = self.run_publish(context, current, runner=runner)
+        self.assertTrue(runner.existed_at_add, "apply must run before staging")
+        self.assertLess(runner.index("git push"), runner.index("gh api"))
+        self.assertEqual("abc123def4567890", result.commit)
+        self.assertEqual("main", result.branch)
+        self.assertTrue(result.live)
+        self.assertIn(context.site.base_url, self.fetcher.urls)
+        self.assertEqual(result.verified_url_count, len(self.fetcher.urls))
+
+    def test_verification_runs_after_the_build_wait(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            context, current, _pointer = make_publishing_world(Path(tmp))
+            runner = RecordingRunner()
+            commands_before_first_fetch = []
+
+            class _CountingFetcher(RecordingFetcher):
+                def __call__(self, url, timeout=10.0):
+                    commands_before_first_fetch.append(len(runner.calls))
+                    return super().__call__(url, timeout)
+
+            self.run_publish(context, current, runner=runner, fetcher=_CountingFetcher())
+        self.assertTrue(commands_before_first_fetch)
+        self.assertGreater(commands_before_first_fetch[0], runner.index("gh api"))
+
+    def test_a_declined_confirmation_applies_nothing(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            context, current, _pointer = make_publishing_world(Path(tmp))
+            page = context.artefacts_root / "talk" / "cost-model" / "index.html"
+            self.assertIsNone(self.run_publish(context, current, answer="no"))
+            self.assertFalse(page.is_file())
+        self.assertEqual([], self.runner.ran("git commit"))
+        self.assertIn("cancelled", self.output.getvalue())
+
+    def test_the_confirmation_states_the_urls_and_the_irreversibility(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            context, current, _pointer = make_publishing_world(Path(tmp))
+            self.run_publish(context, current, answer="no")
+        text = self.prompt[0]
+        self.assertIn("talk/cost-model/", text)
+        self.assertIn("irreversible", text)
+        self.assertIn("Type yes to continue", text)
+
+    def test_no_changes_verifies_the_urls_and_commits_nothing(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            context, current, pointer = make_publishing_world(Path(tmp))
+            with contextlib.redirect_stdout(io.StringIO()):
+                cli.main(["sync", "--pointer", str(pointer), "--yes"])
+            current = manifest.load_manifest(context.artefacts_root)
+            self.assertIsNone(self.run_publish(context, current))
+        self.assertEqual([], self.runner.ran("git commit"))
+        self.assertIn("nothing to publish", self.output.getvalue())
+        self.assertIn(context.site.base_url, self.fetcher.urls)
+
+    def test_a_blocked_plan_raises_before_anything_is_applied(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            context, current, _pointer = make_publishing_world(
+                Path(tmp), extra={"diagrams/bad.svg": b"<svg>\n<script/>\n</svg>\n"}
+            )
+            with self.assertRaises(publish.BlockedPlan) as caught:
+                self.run_publish(context, current)
+        self.assertEqual([], self.runner.ran("git commit"))
+        self.assertTrue(caught.exception.plan.blocked)
+
+    def test_protected_branch_mode_pushes_a_branch_and_stops(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            context, current, _pointer = make_publishing_world(Path(tmp), push="branch")
+            result = self.run_publish(context, current)
+        self.assertEqual("artefact-sync/20260823-120000", result.branch)
+        self.assertFalse(result.live)
+        self.assertEqual(0, result.verified_url_count)
+        self.assertEqual([], self.runner.ran("gh api"))
+        self.assertEqual([], self.fetcher.urls)
+        self.assertIn("compare/main...artefact-sync/20260823-120000", self.output.getvalue())
+
+    def test_another_host_skips_the_build_wait_and_says_so(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            context, current, _pointer = make_publishing_world(Path(tmp))
+            result = self.run_publish(context, current, overrides={
+                "git remote get-url origin": ("git@gitlab.example:someone/notes.git\n", "", 0),
+            })
+        self.assertEqual([], self.runner.ran("gh "))
+        self.assertEqual(0, result.verified_url_count)
+        self.assertIn("no build API", self.output.getvalue())
+
+    def test_a_failed_validate_stops_before_the_commit(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            context, current, _pointer = make_publishing_world(Path(tmp))
+            with mock.patch.object(
+                publish.validate_module, "validate_repository",
+                side_effect=ValidationError("catalogue link missing"),
+            ):
+                with self.assertRaises(PublishError) as caught:
+                    self.run_publish(context, current)
+        self.assertEqual([], self.runner.ran("git commit"))
+        self.assertIn("catalogue link missing", str(caught.exception))
+        self.assertIn("nothing was committed", str(caught.exception))
+
+    def test_a_failed_apply_names_sync_as_the_recovery(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            context, current, _pointer = make_publishing_world(Path(tmp))
+            with mock.patch.object(
+                publish.apply_module, "apply_plan",
+                side_effect=ValidationError("applied file differs from plan"),
+            ):
+                with self.assertRaises(PublishError) as caught:
+                    self.run_publish(context, current)
+        self.assertIn("artefact-sync sync", str(caught.exception))
+
+    def test_never_force_pushes_or_resets(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            context, current, _pointer = make_publishing_world(Path(tmp))
+            self.run_publish(context, current)
+        for call in self.runner.calls:
+            joined = " ".join(call)
+            for banned in ("--force", " -f", "reset --hard", "revert"):
+                self.assertNotIn(banned, joined)
+
+
+class PublishCommandTests(unittest.TestCase):
+    def test_runs_the_self_check_before_publishing(self) -> None:
+        order = []
+        with tempfile.TemporaryDirectory() as tmp:
+            _context, _current, pointer = make_publishing_world(Path(tmp))
+            with mock.patch.object(cli.selfcheck, "run_self_check",
+                                   side_effect=lambda *a: order.append("selfcheck")):
+                with mock.patch.object(cli.publish, "publish",
+                                       side_effect=lambda *a, **k: order.append("publish")):
+                    with contextlib.redirect_stdout(io.StringIO()):
+                        code = cli.main(["publish", "--pointer", str(pointer)])
+        self.assertEqual(cli.EXIT_OK, code)
+        self.assertEqual(["selfcheck", "publish"], order)
+
+    def test_a_blocked_plan_exits_3_and_writes_the_proposal(self) -> None:
+        # publish.publish is patched rather than driven: its `runner` default binds at
+        # definition time, so patching provider.subprocess_runner afterwards would not
+        # reach it, and the real runner would fail preflight on the fixture's absent origin.
+        with tempfile.TemporaryDirectory() as tmp:
+            context, _current, pointer = make_publishing_world(Path(tmp))
+            source = Path(json.loads(pointer.read_text())["source"])
+            (source / "curve.png").write_bytes(b"\x89PNG\r\n\x1a\n")
+            reloaded = manifest.load_manifest(context.artefacts_root)
+            blocked = plan_module.create_sync_plan(context, reloaded)
+            self.assertTrue(blocked.blocked)
+            with mock.patch.object(cli.selfcheck, "run_self_check"):
+                with mock.patch.object(cli.publish, "publish",
+                                       side_effect=publish.BlockedPlan(blocked)):
+                    with contextlib.redirect_stdout(io.StringIO()):
+                        with contextlib.redirect_stderr(io.StringIO()):
+                            code = cli.main(["publish", "--pointer", str(pointer)])
+            body = json.loads(
+                (context.artefacts_root / manifest.MANIFEST_NAME).read_text(encoding="utf-8")
+            )
+        self.assertEqual(cli.EXIT_BLOCKED, code)
+        self.assertIn("curve.png", {entry["source"] for entry in body["entries"]})
+
+    def test_reports_the_commit_and_the_verified_count(self) -> None:
+        result = publish.PublishResult("main", "abc123def4567890", True,
+                                       "https://x.example/artefacts/", 4)
+        with tempfile.TemporaryDirectory() as tmp:
+            _context, _current, pointer = make_publishing_world(Path(tmp))
+            output = io.StringIO()
+            with mock.patch.object(cli.selfcheck, "run_self_check"):
+                with mock.patch.object(cli.publish, "publish", return_value=result):
+                    with contextlib.redirect_stdout(output):
+                        code = cli.main(["publish", "--pointer", str(pointer)])
+        self.assertEqual(cli.EXIT_OK, code)
+        self.assertIn("abc123def456", output.getvalue())
+        self.assertIn("verified 4", output.getvalue())

@@ -6,7 +6,8 @@ import sys
 from pathlib import Path, PurePosixPath
 
 from . import apply as apply_module
-from . import catalogue, config, manifest, plan as plan_module, provider, validate
+from . import catalogue, config, manifest, plan as plan_module, provider, publish, selfcheck
+from . import validate
 from .errors import ArtefactSyncError, ConfigError, UnlistedSources
 
 EXIT_OK = 0
@@ -155,17 +156,36 @@ def command_validate(args: argparse.Namespace) -> int:
     return EXIT_OK
 
 
+def command_publish(args: argparse.Namespace) -> int:
+    context, current = _command_state(args)
+    selfcheck.run_self_check(context.artefacts_root)
+    try:
+        result = publish.publish(context, current)
+    except publish.BlockedPlan as blocked:
+        _write_proposed_manifest(context, blocked.plan)
+        print(str(blocked), file=sys.stderr)
+        return EXIT_BLOCKED
+    if result is None:
+        return EXIT_OK
+    print(f"published {result.commit[:12]} on {result.branch}")
+    if result.verified_url_count:
+        print(f"verified {result.verified_url_count} published URLs "
+              f"under {result.catalogue_url}")
+    return EXIT_OK
+
+
 def _dispatch(args: argparse.Namespace) -> int:
     if args.command == "init":
         return command_init(args)
     commands = {
         "plan": command_plan,
         "sync": command_sync,
+        "publish": command_publish,
         "validate": command_validate,
     }
     command = commands.get(args.command)
     if command is None:
-        raise ConfigError(f"{args.command} command is not available in M1")
+        raise ConfigError(f"{args.command} command is not available yet")
     return command(args)
 
 

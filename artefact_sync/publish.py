@@ -1,11 +1,16 @@
 from __future__ import annotations
 
+import time
+from dataclasses import dataclass
+from datetime import datetime
 from pathlib import Path
 
-from . import catalogue, provider
+from . import apply as apply_module, catalogue, plan as plan_module, provider
+from . import validate as validate_module
 from .config import ARTEFACTS_DIRNAME, Context
-from .errors import PublishError
+from .errors import ArtefactSyncError, PublishError
 from .manifest import Manifest
+from .plan import SyncPlan
 from .provider import CommandRunner, run_checked
 
 COMMIT_MESSAGE = "chore: sync artefacts"
@@ -174,3 +179,132 @@ def verify_public_urls(urls: tuple[str, ...], fetcher: provider.Fetcher) -> None
                 + "\n\nThe commit is pushed and was not rolled back. Check the Pages build, "
                 "then run 'artefact-sync publish' again to re-verify."
             )
+
+
+class BlockedPlan(ArtefactSyncError):
+    """The plan needs a human decision. Carries it so the CLI can write the proposal."""
+
+    def __init__(self, plan: SyncPlan) -> None:
+        super().__init__(f"{len(plan.blocked)} blocked item(s); nothing was published")
+        self.plan = plan
+
+
+@dataclass(frozen=True)
+class PublishResult:
+    branch: str
+    commit: str
+    live: bool
+    catalogue_url: str
+    verified_url_count: int
+
+
+def confirmation_text(context: Context, sync_plan: SyncPlan) -> str:
+    """The last gate before content is public. It spells out consequence, not operation."""
+    added = sorted(
+        (change for change in sync_plan.changes
+         if change.kind == "add" and change.source is not None),
+        key=lambda change: change.url,
+    )
+    removed = sorted(
+        (change for change in sync_plan.changes if change.kind == "delete"),
+        key=lambda change: change.url,
+    )
+    lines = [""]
+    if added:
+        lines.append(f"{len(added)} new public URL(s):")
+        lines.extend(f"  {change.url}" for change in added)
+    if removed:
+        lines.append(f"{len(removed)} URL(s) will start returning 404:")
+        lines.extend(f"  {change.url}" for change in removed)
+    lines += [
+        "",
+        "Publishing is irreversible in practice. Search engines and readers cache a URL",
+        "once it is public, and deleting the file later does not undo that.",
+        "",
+        f"Publish to {context.site.base_url}? Type yes to continue: ",
+    ]
+    return "\n".join(lines)
+
+
+def _pull_request_hint(context: Context, runner: CommandRunner, default: str, branch: str) -> str:
+    remote = provider.remote_url(context.repo_root, runner)
+    match = provider.GITHUB_REMOTE.search(remote or "")
+    if not match:
+        return f"open a merge request from {branch} into {default} to make it live."
+    return (
+        "open the pull request:\n  "
+        f"https://github.com/{match.group(1)}/{match.group(2)}/compare/"
+        f"{default}...{branch}?expand=1"
+    )
+
+
+def publish(
+    context: Context,
+    current: Manifest,
+    runner: CommandRunner = provider.subprocess_runner,
+    fetcher: provider.Fetcher = provider.fetch,
+    confirm=input,
+    now=datetime.now,
+    sleeper=time.sleep,
+):
+    """Make the artefacts tree live. Returns None when there was nothing to do.
+
+    `validate` runs after `apply`, not before: it asserts every entry's destination exists,
+    so running it first would reject any manifest holding an entry not yet written, which is
+    every first publish of anything.
+    """
+    default = preflight(context, runner)
+    sync_plan = plan_module.create_sync_plan(context, current)
+    print(plan_module.format_plan(sync_plan), end="")
+    if sync_plan.blocked:
+        raise BlockedPlan(sync_plan)
+
+    if not sync_plan.changes:
+        urls = public_urls(context, sync_plan.next_manifest)
+        verify_public_urls(urls, fetcher)
+        print(f"nothing to publish; {len(urls)} published URLs verified.")
+        return None
+
+    if confirm(confirmation_text(context, sync_plan)) != "yes":
+        print("publish cancelled; nothing was applied.")
+        return None
+
+    try:
+        apply_module.apply_plan(context, sync_plan)
+    except ArtefactSyncError as error:
+        raise PublishError(
+            f"{error}\n\nThe artefacts tree may be half written, and nothing was committed "
+            "or pushed. Run 'artefact-sync sync' to converge it."
+        ) from error
+
+    try:
+        notes = validate_module.validate_repository(context, sync_plan.next_manifest)
+    except ArtefactSyncError as error:
+        raise PublishError(
+            f"{error}\n\nThe tree is applied and nothing was committed or pushed. "
+            "Fix the cause, then run 'artefact-sync publish' again."
+        ) from error
+    for note in notes:
+        print(f"warning: {note.kind} {note.where}: {note.detail}")
+
+    branch = (
+        default if context.push == "direct"
+        else f"{BRANCH_PREFIX}/{now().strftime('%Y%m%d-%H%M%S')}"
+    )
+    commit = commit_and_push(context, branch, default, runner)
+
+    if branch != default:
+        print(f"pushed {branch}; nothing is live yet.")
+        print(_pull_request_hint(context, runner, default, branch))
+        return PublishResult(branch, commit, False, context.site.base_url, 0)
+
+    if not provider.is_github(provider.remote_url(context.repo_root, runner)):
+        print("this host exposes no build API, so the site may still be building; "
+              "check the published URLs by hand.")
+        return PublishResult(branch, commit, True, context.site.base_url, 0)
+
+    repository = provider.repository_name(context.repo_root, runner)
+    provider.wait_for_build(context.repo_root, repository, commit, runner, sleeper)
+    urls = public_urls(context, sync_plan.next_manifest)
+    verify_public_urls(urls, fetcher)
+    return PublishResult(branch, commit, True, context.site.base_url, len(urls))
