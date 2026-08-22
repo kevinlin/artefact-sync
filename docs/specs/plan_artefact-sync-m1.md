@@ -2101,7 +2101,7 @@ over 10 MB.
 Run: `python3 -m unittest tests.test_plan -v`
 Expected: PASS, 8 tests.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add artefact_sync/plan.py tests/test_plan.py
