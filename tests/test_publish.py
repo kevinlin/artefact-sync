@@ -2,12 +2,12 @@ from __future__ import annotations
 
 import tempfile
 import unittest
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 
 from artefact_sync import config, manifest, publish
 from artefact_sync.config import site_from_dict
 from artefact_sync.errors import PublishError
-from tests.helpers import RecordingRunner, make_repo, make_source_tree
+from tests.helpers import RecordingFetcher, RecordingRunner, make_repo, make_source_tree
 
 BASE_URL = "https://someone.github.io/notes/artefacts/"
 
@@ -163,3 +163,64 @@ class CommitAndPushTests(unittest.TestCase):
         with self.assertRaises(PublishError):
             self.run_it(overrides={"git commit -m": ("", "nothing to commit\n", 1)})
         self.assertEqual([], self.runner.ran("git push"))
+
+
+class PublicUrlTests(unittest.TestCase):
+    def _manifest(self, **overrides) -> manifest.Manifest:
+        entries = (
+            manifest.Entry(id="note", source=PurePosixPath("note.md"),
+                           destination=PurePosixPath("incident/note/index.html"),
+                           title="Note", collection="c", order=1),
+            manifest.Entry(id="curve", source=PurePosixPath("curve.png"),
+                           destination=PurePosixPath("talk/curve.png"),
+                           title="Curve", collection="c", order=2),
+        )
+        body = {"version": 1, "site": site_from_dict({"base_url": BASE_URL}),
+                "protected_files": (PurePosixPath("vendor/marked.min.js"),),
+                "ignored_sources": (), "collections": (), "entries": entries}
+        body.update(overrides)
+        return manifest.Manifest(**body)
+
+    def test_covers_the_catalogue_every_entry_and_every_protected_file(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            context = make_context(Path(tmp))
+            urls = publish.public_urls(context, self._manifest())
+        self.assertEqual(
+            (BASE_URL,
+             BASE_URL + "incident/note/",
+             BASE_URL + "talk/curve.png",
+             BASE_URL + "vendor/marked.min.js"),
+            urls,
+        )
+
+    def test_adds_the_host_page_in_inject_mode(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            context = make_context(Path(tmp))
+            site = site_from_dict(
+                {"base_url": BASE_URL, "catalogue": {"mode": "inject", "page": "gallery.html"}}
+            )
+            context = config.Context(context.repo_root, context.source_root,
+                                     context.artefacts_root, site, "direct")
+            urls = publish.public_urls(context, self._manifest())
+        self.assertIn(BASE_URL + "gallery.html", urls)
+
+
+class VerifyPublicUrlsTests(unittest.TestCase):
+    def test_fetches_every_url(self) -> None:
+        fetcher = RecordingFetcher()
+        publish.verify_public_urls((BASE_URL, BASE_URL + "a.png"), fetcher)
+        self.assertEqual([BASE_URL, BASE_URL + "a.png"], fetcher.urls)
+
+    def test_a_non_200_names_the_url_the_code_and_the_absence_of_rollback(self) -> None:
+        fetcher = RecordingFetcher(overrides={BASE_URL + "a.png": 404})
+        with self.assertRaises(PublishError) as caught:
+            publish.verify_public_urls((BASE_URL, BASE_URL + "a.png"), fetcher)
+        message = str(caught.exception)
+        self.assertIn("a.png", message)
+        self.assertIn("404", message)
+        self.assertIn("was not rolled back", message)
+
+    def test_a_dead_host_reports_no_response(self) -> None:
+        with self.assertRaises(PublishError) as caught:
+            publish.verify_public_urls((BASE_URL,), RecordingFetcher(status=0))
+        self.assertIn("no response", str(caught.exception))

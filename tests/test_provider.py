@@ -9,7 +9,7 @@ from pathlib import Path
 
 from artefact_sync import provider
 from artefact_sync.errors import PublishError
-from tests.helpers import make_repo
+from tests.helpers import RecordingRunner, make_repo
 
 ENV = {"PATH": "/usr/bin:/bin:/usr/local/bin"}
 
@@ -106,3 +106,56 @@ class FetchTests(unittest.TestCase):
 
     def test_refuses_a_non_http_scheme(self) -> None:
         self.assertEqual(0, provider.fetch("file:///etc/passwd"))
+
+
+class BuildWaitTests(unittest.TestCase):
+    def wait(self, overrides: dict | None = None, commit: str = "abc123def4567890") -> None:
+        self.runner = RecordingRunner(overrides)
+        self.slept = []
+        provider.wait_for_build(
+            Path("."), "someone/notes", commit, self.runner, self.slept.append
+        )
+
+    def test_returns_once_the_build_reports_this_commit_built(self) -> None:
+        self.wait()
+        self.assertEqual([], self.slept)
+
+    def test_reports_the_pages_error_for_this_commit(self) -> None:
+        with self.assertRaises(PublishError) as caught:
+            self.wait({"gh api repos/someone/notes/pages/builds/latest": (
+                '{"status": "errored", "commit": "abc123def4567890",'
+                ' "error": {"message": "symlink not allowed"}}\n', "", 0)})
+        self.assertIn("symlink not allowed", str(caught.exception))
+
+    def test_keeps_polling_past_an_error_on_an_older_commit(self) -> None:
+        with self.assertRaises(PublishError) as caught:
+            self.wait({"gh api repos/someone/notes/pages/builds/latest": (
+                '{"status": "errored", "commit": "0000000000000000",'
+                ' "error": {"message": "old failure"}}\n', "", 0)})
+        self.assertNotIn("old failure", str(caught.exception))
+        self.assertEqual(provider.BUILD_POLL_ATTEMPTS, len(self.slept))
+
+    def test_times_out_and_names_the_recovery(self) -> None:
+        with self.assertRaises(PublishError) as caught:
+            self.wait({"gh api repos/someone/notes/pages/builds/latest": (
+                '{"status": "building", "commit": "abc123def4567890"}\n', "", 0)})
+        message = str(caught.exception)
+        self.assertIn("did not deploy", message)
+        self.assertIn("artefact-sync publish", message)
+
+    def test_rejects_an_unparseable_payload(self) -> None:
+        with self.assertRaises(PublishError) as caught:
+            self.wait({"gh api repos/someone/notes/pages/builds/latest": ("not json\n", "", 0)})
+        self.assertIn("cannot parse", str(caught.exception))
+
+
+class RepositoryNameTests(unittest.TestCase):
+    def test_reads_name_with_owner(self) -> None:
+        self.assertEqual(
+            "someone/notes", provider.repository_name(Path("."), RecordingRunner())
+        )
+
+    def test_rejects_an_unparseable_payload(self) -> None:
+        runner = RecordingRunner({"gh repo view --json nameWithOwner": ("{}\n", "", 0)})
+        with self.assertRaises(PublishError):
+            provider.repository_name(Path("."), runner)

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import re
 import subprocess
 import urllib.error
@@ -95,3 +96,61 @@ def fetch(url: str, timeout: float = 10.0) -> int:
         return error.code
     except (urllib.error.URLError, OSError, ValueError):
         return 0
+
+
+BUILD_POLL_SECONDS = 5
+BUILD_POLL_ATTEMPTS = 60
+
+
+def _parse_json(output: str, description: str):
+    try:
+        return json.loads(output)
+    except json.JSONDecodeError as error:
+        raise PublishError(f"cannot parse {description}") from error
+
+
+def repository_name(repo_root: Path, runner: CommandRunner) -> str:
+    output = run_checked(
+        runner, ["gh", "repo", "view", "--json", "nameWithOwner"], repo_root,
+        "cannot identify the GitHub repository",
+    )
+    payload = _parse_json(output, "the GitHub repository")
+    name = payload.get("nameWithOwner") if isinstance(payload, dict) else None
+    if not name:
+        raise PublishError("cannot parse the GitHub repository")
+    return name
+
+
+def wait_for_build(
+    repo_root: Path, repository: str, commit: str,
+    runner: CommandRunner, sleeper: Callable[[float], None],
+) -> None:
+    """Block until GitHub Pages has deployed `commit`.
+
+    Only a build whose own `commit` matches is believed: a build that errored on an earlier
+    commit says nothing about this one, and treating it as failure would abort a publish that
+    is already live. Ported from artefacts.py:1975-1998.
+    """
+    for _ in range(BUILD_POLL_ATTEMPTS):
+        output = run_checked(
+            runner, ["gh", "api", f"repos/{repository}/pages/builds/latest"], repo_root,
+            "cannot read the GitHub Pages build",
+        )
+        build = _parse_json(output, "the GitHub Pages build")
+        if isinstance(build, dict) and build.get("commit") == commit:
+            if build.get("status") == "built":
+                return
+            if build.get("status") == "errored":
+                message = (build.get("error") or {}).get("message") or "unknown Pages error"
+                raise PublishError(
+                    f"the GitHub Pages build failed: {message}\n\n"
+                    f"Commit {commit[:12]} is pushed and the site is not serving it. "
+                    f"Fix the cause, then run 'artefact-sync publish' again."
+                )
+        sleeper(BUILD_POLL_SECONDS)
+    minutes = BUILD_POLL_SECONDS * BUILD_POLL_ATTEMPTS // 60
+    raise PublishError(
+        f"GitHub Pages did not deploy {commit[:12]} within {minutes} minutes\n\n"
+        f"The commit is pushed. Check the Pages settings for {repository}, then re-run "
+        "'artefact-sync publish' to verify the URLs."
+    )

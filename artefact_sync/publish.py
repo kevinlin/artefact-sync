@@ -2,9 +2,10 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from . import provider
+from . import catalogue, provider
 from .config import ARTEFACTS_DIRNAME, Context
 from .errors import PublishError
+from .manifest import Manifest
 from .provider import CommandRunner, run_checked
 
 COMMIT_MESSAGE = "chore: sync artefacts"
@@ -145,3 +146,31 @@ def commit_and_push(context: Context, branch: str, default: str, runner: Command
             f"  git -C {context.repo_root} push origin {branch}"
         )
     return commit
+
+
+def public_urls(context: Context, current: Manifest) -> tuple[str, ...]:
+    """Every URL this publish makes a promise about, catalogue first.
+
+    `protected_files` are included because the prior art's check omitted them, so a green
+    publish never proved the vendored marked.min.js was reachable — and every Markdown page
+    renders blank without it.
+    """
+    base = context.site.base_url
+    urls = [base]
+    if context.site.catalogue_mode == "inject" and context.site.catalogue_page is not None:
+        urls.append(base + context.site.catalogue_page.as_posix())
+    urls.extend(base + catalogue.public_href(entry) for entry in current.entries)
+    urls.extend(base + path.as_posix() for path in current.protected_files)
+    return tuple(dict.fromkeys(urls))
+
+
+def verify_public_urls(urls: tuple[str, ...], fetcher: provider.Fetcher) -> None:
+    for url in urls:
+        status = fetcher(url)
+        if status != 200:
+            raise PublishError(
+                f"published URL {url} returned "
+                + (f"HTTP {status}" if status else "no response")
+                + "\n\nThe commit is pushed and was not rolled back. Check the Pages build, "
+                "then run 'artefact-sync publish' again to re-verify."
+            )
