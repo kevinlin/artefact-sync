@@ -1,0 +1,110 @@
+{
+  "version": 1,
+
+  "protected_files": [
+    "vendor/marked.min.js",
+    "vendor/chart.umd.min.js",
+    "CNAME"
+  ],
+
+  "ignored_sources": [
+    "conference-talk/prompts/",
+    "conference-talk/speaker-notes.md",
+    "incident-writeup/drafts/",
+    "incident-writeup/raw-transcript.md"
+  ],
+
+  "collections": [
+    {
+      "id": "conference-talk",
+      "title": "Conference talk",
+      "description": "Slides and diagrams from the 2026 platform engineering talk.",
+      "section": "Presentations and analysis",
+      "section_order": 10,
+      "order": 10
+    },
+    {
+      "id": "incident-writeup",
+      "title": "Incident write-ups",
+      "description": "Post-incident reports, published after internal review.",
+      "section": "Presentations and analysis",
+      "section_order": 10,
+      "order": 20
+    },
+    {
+      "id": "diagrams",
+      "title": "Diagrams",
+      "description": "Standalone architecture and flow diagrams.",
+      "section": "Image collections",
+      "section_order": 20,
+      "order": 10
+    }
+  ],
+
+  "entries": [
+    {
+      "id": "conference-talk-deck",
+      "source": "conference-talk/Platform Engineering 2026.pdf",
+      "destination": "conference-talk/platform-engineering-2026.pdf",
+      "title": "Platform engineering in 2026 (slides)",
+      "description": "The deck as presented, 34 slides.",
+      "date": "2026-05-14",
+      "collection": "conference-talk",
+      "order": 10,
+      "replacements": {}
+    },
+    {
+      "id": "conference-talk-cost-model",
+      "source": "conference-talk/cost-model.html",
+      "destination": "conference-talk/cost-model/index.html",
+      "title": "Build vs. buy: interactive cost model",
+      "description": "Chart.js widget backing slide 21.",
+      "date": "2026-05-14",
+      "collection": "conference-talk",
+      "order": 20,
+      "replacements": {
+        "https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js": "../../vendor/chart.umd.min.js"
+      }
+    },
+    {
+      "id": "conference-talk-adoption-curve",
+      "source": "conference-talk/Adoption Curve.png",
+      "destination": "conference-talk/adoption-curve.png",
+      "title": "Platform adoption curve, 18 months",
+      "date": "2026-05-14",
+      "collection": "conference-talk",
+      "order": 30,
+      "replacements": {}
+    },
+    {
+      "id": "incident-writeup-queue-backlog",
+      "source": "incident-writeup/queue-backlog-2026-03.md",
+      "destination": "incident-writeup/queue-backlog-2026-03/index.html",
+      "title": "Queue backlog, March 2026",
+      "description": "Six-hour delivery delay: root cause, timeline, and what changed.",
+      "date": "2026-03-28",
+      "collection": "incident-writeup",
+      "order": 10,
+      "replacements": {}
+    },
+    {
+      "id": "diagrams-request-lifecycle",
+      "source": "diagrams/request-lifecycle.svg",
+      "destination": "diagrams/request-lifecycle.svg",
+      "title": "Request lifecycle",
+      "collection": "diagrams",
+      "order": 10,
+      "replacements": {}
+    },
+    {
+      "id": "diagrams-deploy-flow",
+      "source": "diagrams/Deploy Flow v3.png",
+      "destination": "diagrams/deploy-flow.png",
+      "title": "Deploy flow",
+      "description": "Kept at the v1 destination after the source was renamed to v3.",
+      "collection": "diagrams",
+      "order": 20,
+      "replacements": {}
+    }
+  ]
+}
