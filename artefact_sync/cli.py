@@ -255,6 +255,7 @@ def command_sync(args: argparse.Namespace) -> int:
         _write_proposed_manifest(context, sync_plan)
         return EXIT_BLOCKED
     if not args.yes and input("Apply these changes? Type yes to continue: ") != "yes":
+        print("sync cancelled; nothing was applied.")
         return EXIT_ERROR
     apply_module.apply_plan(context, sync_plan)
     return EXIT_OK

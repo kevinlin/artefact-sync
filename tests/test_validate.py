@@ -1,9 +1,12 @@
 from __future__ import annotations
 
+import contextlib
+import io
 import json
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 from artefact_sync import cli
 from tests.helpers import make_repo, make_source_tree
@@ -55,6 +58,17 @@ class ValidateTests(unittest.TestCase):
 
 
 class SyncTests(unittest.TestCase):
+    def test_declining_confirmation_reports_that_nothing_was_applied(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            _repo, _source, pointer = seeded(Path(tmp))
+            output = io.StringIO()
+            with contextlib.redirect_stdout(output), mock.patch(
+                "builtins.input", return_value="no"
+            ):
+                code = cli.main(["sync", "--pointer", str(pointer)])
+        self.assertEqual(cli.EXIT_ERROR, code)
+        self.assertIn("nothing was applied", output.getvalue().lower())
+
     def test_an_unlisted_approved_source_blocks_with_exit_3(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             _repo, source, pointer = seeded(Path(tmp))
