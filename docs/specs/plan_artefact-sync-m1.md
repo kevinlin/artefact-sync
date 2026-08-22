@@ -1917,7 +1917,7 @@ existing entry (new `source`, unchanged `id`, `destination` and `title`) instead
 Run: `python3 -m unittest tests.test_propose -v`
 Expected: PASS, 7 tests.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add artefact_sync/propose.py tests/test_propose.py
