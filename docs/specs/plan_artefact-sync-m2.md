@@ -2303,10 +2303,44 @@ default, runner)` has the same argument order in its definition, its tests and i
 
 ## Deviations from this plan
 
-<!-- Fill this in during implementation, as M1 did. Three headings: plan defects found and
-corrected; review findings fixed after Task 9; design corrections this implementation forced,
-applied to design_artefact-sync.md. A plan that hides where it was wrong is worth less on the next
-milestone. -->
+Recorded because the plan was written before the code existed, and a plan that hides where it was
+wrong is worth less on the next milestone.
+
+Plan defects found and corrected during implementation:
+
+- Task 4's Step 5 check contradicted its own Step 2. Step 2 writes
+  `validate.validate_repository(context, current)` into `cli.py`; Step 5 then greps for
+  `'validate_repository' in src` and expects `False`, which a plain call to a moved function can
+  never satisfy. The check was meant to prove the *definition* left `cli.py`, so it is now
+  `'def validate_repository' in src`. Implementation first satisfied the literal grep by building
+  the attribute name as `getattr(validate, "validate_" + "repository")`; review reversed that. A
+  check that a readable call cannot pass is the defective half, and hiding a real dependency from
+  grep and every static analyser is a worse outcome than the check it buys.
+- Task 5's arithmetic was off by one. Step 1 defines fourteen `PreflightTests` methods, Step 6
+  states thirteen, and every later count inherits the error. The corrected chain is 162 after
+  Task 5, 169 after Task 6, 181 after Task 7, and **195** at the end of M2, not 194.
+  Implementation first hit the stated thirteen by merging `test_rejects_a_missing_git` and
+  `test_rejects_a_missing_github_cli` into one subTest loop; review reversed that too. Two failures
+  with different messages, on different missing binaries, are two tests, and a subTest loop hides
+  which half broke behind one red result.
+
+Both defects were first resolved by bending code to a stated number rather than fixing the number.
+Worth naming as a pattern for M3: a count in a plan is a prediction, and the tests are the fact.
+
+Review findings fixed after Task 9:
+
+- Task 9's live run (its Steps 3 and 4) has not been run yet; it needs a disposable public
+  repository under the user's own account. Everything else in Task 9 — the `SKILL.md` publish
+  section and the acceptance checklist at `docs/specs/m2-acceptance.md` — is in place, with the
+  checklist left at `Status: not yet run`. This section stays open until that run happens, and
+  M2 is not complete until it does.
+
+Design corrections this implementation forced:
+
+- None. The six corrections the plan itself carries (M1-a, M2-a through M2-f) all held as written;
+  nothing in Tasks 1-8 disproved a claim in [design_artefact-sync.md](design_artefact-sync.md). The
+  live run is the step with the standing power to disprove one, since it covers exactly what the
+  recorded fake world mocks out.
 
 ## Milestones after M2
 

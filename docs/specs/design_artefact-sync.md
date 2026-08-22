@@ -1,6 +1,8 @@
 # Design: artefact-sync
 
-Status: M1 built. `init`, `plan`, `sync` and `validate` ship; M2-M4 unbuilt.
+Status: M1 built. M2's code is built and reviewed — `publish`, `provider`, the
+install self-check — but its acceptance run against a disposable Pages repository is
+outstanding, so the provider seam has no live evidence yet. M3-M4 unbuilt.
 Date: 2026-08-22
 
 Refines [requirement_artefact-sync.md](requirement_artefact-sync.md) against what the prior art
