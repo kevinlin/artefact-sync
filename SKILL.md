@@ -34,10 +34,25 @@ The two-step proposal flow prevents a newly discovered file from becoming public
 - `plan`: show new public URLs, changed content, URLs that would start returning 404, warnings, and blocked files. An unseen approved source writes only its proposed manifest entry and exits 3.
 - `sync`: recompute the plan, confirm it, apply atomic per-file writes, delete vanished managed entries, and leave unmanaged files alone. `--yes` is available for unattended verified runs.
 - `validate`: check the manifest, required files, catalogue links, local references, and SVG policy. Unmanaged files are warnings.
-- `add <path>`: reserved for M3. It is not available in M1.
-- `publish`: reserved for M2. It is not available in M1. Publishing is irreversible in practice because search engines and downstream readers may cache a URL after it becomes public.
+- `add <path>`: reserved for M3. It is not available yet.
+- `publish`: recompute the plan, confirm it, apply it, validate the tree, commit, push, wait for
+  the Pages build, then fetch every published URL including protected files. Publishing is
+  irreversible in practice: search engines and readers may cache a URL once it is public, and
+  deleting the file later does not undo that. State this before running it.
 
 Commands accept `--repo` and `--source` overrides. Tests may also pass `--pointer`; normal use relies on `~/.config/artefact-sync/config.json`.
+
+## Publishing
+
+`publish` needs `git`, and needs `gh` authenticated when the remote is GitHub. It refuses to start
+unless the working tree is clean outside `artefacts/`, the checkout is on the default branch, and
+that branch matches `origin`. Set `"push": "branch"` in `~/.config/artefact-sync/config.json` for a
+protected default branch: `publish` then pushes a timestamped branch, prints the pull request URL,
+and stops without making anything live.
+
+Every failure stops and prints the recovery for that exact state. Nothing force-pushes and nothing
+rolls back automatically. If a publish fails after the push, re-run `publish`: with no changes left
+it re-verifies the published URLs and reports.
 
 ## Manifest
 
