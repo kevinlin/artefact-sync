@@ -107,3 +107,41 @@ def preflight(context: Context, runner: CommandRunner) -> str:
             f"git -C {context.repo_root} pull --ff-only origin {default}"
         )
     return default
+
+
+def commit_and_push(context: Context, branch: str, default: str, runner: CommandRunner) -> str:
+    """Commit the applied artefacts tree and push it. Returns the new commit.
+
+    The push is the irreversible step, so its failure carries recovery naming the commit that
+    is sitting locally. Nothing here retries, resets or force-pushes: force-pushing someone's
+    default branch over a transient network error is worse than the error.
+    """
+    if branch != default:
+        run_checked(
+            runner, ["git", "switch", "-c", branch], context.repo_root,
+            f"cannot create branch {branch}",
+        )
+    # Stage the directory rather than the planned paths: applying a deletion can remove a file
+    # git never tracked, whose path then matches nothing and aborts the whole `git add`.
+    # `validate` has already proved artefacts/ holds exactly the expected set.
+    run_checked(
+        runner, ["git", "add", "--all", "--", ARTEFACTS_DIRNAME], context.repo_root,
+        "cannot stage the artefact changes",
+    )
+    run_checked(
+        runner, ["git", "commit", "-m", COMMIT_MESSAGE], context.repo_root,
+        "cannot commit the artefact changes",
+    )
+    commit = run_checked(
+        runner, ["git", "rev-parse", "HEAD"], context.repo_root, "cannot read the new commit"
+    ).strip()
+
+    result = runner(["git", "push", "origin", branch], context.repo_root)
+    if result.returncode != 0:
+        raise PublishError(
+            provider.failure_message(result, f"cannot push {branch}")
+            + f"\n\nCommit {commit[:12]} is committed locally and was not pushed. "
+            "Nothing is live. When the network is back:\n"
+            f"  git -C {context.repo_root} push origin {branch}"
+        )
+    return commit

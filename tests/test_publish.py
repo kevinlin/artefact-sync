@@ -111,3 +111,55 @@ class PreflightTests(unittest.TestCase):
             self.preflight({"git rev-list --left-right --count": ("1\t2\n", "", 0)})
         self.assertIn("diverged", str(caught.exception))
         self.assertIn("pull --ff-only", str(caught.exception))
+
+
+class CommitAndPushTests(unittest.TestCase):
+    def run_it(self, branch: str = "main", overrides: dict | None = None) -> str:
+        with tempfile.TemporaryDirectory() as tmp:
+            context = make_context(Path(tmp))
+            self.runner = RecordingRunner(overrides)
+            return publish.commit_and_push(context, branch, "main", self.runner)
+
+    def test_returns_the_new_commit(self) -> None:
+        self.assertEqual("abc123def4567890", self.run_it())
+
+    def test_direct_mode_never_creates_a_branch(self) -> None:
+        self.run_it()
+        self.assertEqual([], self.runner.ran("git switch"))
+        self.assertEqual([["git", "push", "origin", "main"]], self.runner.ran("git push"))
+
+    def test_branch_mode_creates_the_branch_before_staging(self) -> None:
+        self.run_it("artefact-sync/20260823-120000")
+        self.assertLess(
+            self.runner.index("git switch -c"), self.runner.index("git add"),
+        )
+        self.assertEqual(
+            [["git", "push", "origin", "artefact-sync/20260823-120000"]],
+            self.runner.ran("git push"),
+        )
+
+    def test_stages_the_directory_rather_than_named_paths(self) -> None:
+        self.run_it()
+        self.assertEqual(
+            [["git", "add", "--all", "--", "artefacts"]], self.runner.ran("git add")
+        )
+
+    def test_never_force_pushes(self) -> None:
+        self.run_it()
+        for call in self.runner.calls:
+            self.assertNotIn("--force", call)
+            self.assertNotIn("-f", call)
+
+    def test_a_failed_push_names_the_local_commit_in_its_recovery(self) -> None:
+        with self.assertRaises(PublishError) as caught:
+            self.run_it(overrides={"git push origin": ("", "network is down\n", 128)})
+        message = str(caught.exception)
+        self.assertIn("abc123def456", message)
+        self.assertIn("Nothing is live", message)
+        self.assertIn("git -C", message)
+        self.assertIn("push origin main", message)
+
+    def test_a_failed_commit_stops_before_any_push(self) -> None:
+        with self.assertRaises(PublishError):
+            self.run_it(overrides={"git commit -m": ("", "nothing to commit\n", 1)})
+        self.assertEqual([], self.runner.ran("git push"))
