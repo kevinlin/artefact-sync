@@ -10,6 +10,7 @@ from .manifest import Entry, Manifest
 
 CATALOGUE_START = "<!-- ARTEFACTS:START -->"
 CATALOGUE_END = "<!-- ARTEFACTS:END -->"
+CATALOGUE_TEMPLATE_NAME = "catalogue-template.html"
 
 
 def _invert(stamp: str) -> str:
@@ -85,7 +86,7 @@ def replace_generated_catalogue(document: str, fragment: str) -> str:
 
 
 def render_standalone_catalogue(manifest: Manifest, site: Site) -> bytes:
-    path = Path(__file__).resolve().parent / "assets" / "catalogue-template.html"
+    path = Path(__file__).resolve().parent / "assets" / CATALOGUE_TEMPLATE_NAME
     template = string.Template(path.read_text(encoding="utf-8"))
     document = template.substitute(
         title="Artefacts",
