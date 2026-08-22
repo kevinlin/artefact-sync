@@ -2274,7 +2274,7 @@ git commit -m "feat(apply): atomic writes, orphan-safe deletion, real round-trip
 which after extraction points at the skill directory. `--repo` and `--source` survive as overrides,
 but the default now comes from the pointer file.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```python
 # tests/test_cli.py
@@ -2348,12 +2348,12 @@ class ExitCodeTests(unittest.TestCase):
         self.assertIn("init", buffer.getvalue())
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `python3 -m unittest tests.test_cli -v`
 Expected: FAIL — `No module named 'artefact_sync.cli'`.
 
-- [ ] **Step 3: Write minimal implementation**
+- [x] **Step 3: Write minimal implementation**
 
 ```python
 # artefact_sync/cli.py — the shape; per-command bodies land in Tasks 14 and 15
@@ -2421,12 +2421,12 @@ def main(argv: list[str] | None = None) -> int:
 `init` before calling `resolve_context`. Create `artefact_sync/__main__.py` containing
 `from .cli import main; raise SystemExit(main())`.
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `python3 -m unittest tests.test_cli -v`
 Expected: PASS, 5 tests.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add artefact_sync/cli.py artefact_sync/__main__.py tests/test_cli.py
