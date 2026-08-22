@@ -1440,7 +1440,7 @@ def render_markdown_page(
 Run: `python3 -m unittest tests.test_render_markdown -v`
 Expected: PASS, 9 tests.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add artefact_sync/render.py artefact_sync/assets/page-template.html tests/test_render_markdown.py
@@ -1584,7 +1584,7 @@ are validated in `scan`, never rewritten.
 Run: `python3 -m unittest tests.test_render_html -v`
 Expected: PASS, 8 tests.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add artefact_sync/render.py tests/test_render_html.py
