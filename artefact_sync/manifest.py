@@ -28,7 +28,7 @@ PROTECTED_COMPONENT = re.compile(r"^[a-z0-9][a-z0-9.-]*$")
 ISO_DATE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 
 
-def _resolve_within(
+def resolve_within(
     root: Path, candidate: Path, error: type[ArtefactSyncError], message: str
 ) -> Path:
     root = root.resolve()
@@ -188,7 +188,7 @@ def manifest_from_dict(payload: dict) -> Manifest:
     return manifest
 
 
-def _is_ignored(source: PurePosixPath, rules: tuple[str, ...]) -> bool:
+def is_ignored(source: PurePosixPath, rules: tuple[str, ...]) -> bool:
     text = source.as_posix()
     for rule in rules:
         if rule.endswith("/"):
@@ -227,7 +227,7 @@ def validate_manifest(manifest: Manifest) -> None:
     _require_unique(list(manifest.ignored_sources), "duplicate ignored source")
 
     for entry in manifest.entries:
-        if _is_ignored(entry.source, manifest.ignored_sources):
+        if is_ignored(entry.source, manifest.ignored_sources):
             raise ValidationError(
                 f"ignored source is also an entry source: {entry.source.as_posix()}"
             )

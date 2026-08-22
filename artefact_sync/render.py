@@ -8,7 +8,7 @@ from pathlib import Path, PurePosixPath
 
 from .config import Context, Site
 from .errors import TransformationError
-from .manifest import TEMPLATE_NAME, VENDOR_NAME, Entry, Manifest, _resolve_within
+from .manifest import TEMPLATE_NAME, VENDOR_NAME, Entry, Manifest, resolve_within
 
 BLOCK_START = '<script type="text/markdown" id="artefact-source">'
 BLOCK_END = "</script>"
@@ -163,7 +163,7 @@ def build_desired_files(
             continue
         if source_path.is_symlink():
             raise TransformationError(f"symbolic link is not allowed: {source_path}")
-        _resolve_within(
+        resolve_within(
             root,
             source_path,
             TransformationError,

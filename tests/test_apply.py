@@ -8,7 +8,7 @@ from pathlib import Path, PurePosixPath
 from artefact_sync import apply as a
 from artefact_sync.config import Context, site_from_dict
 from artefact_sync.errors import ValidationError
-from artefact_sync.manifest import Entry
+from artefact_sync.manifest import Entry, resolve_within
 
 
 class RoundTripVerificationTests(unittest.TestCase):
@@ -45,7 +45,7 @@ class ApplyTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp) / "artefacts"
             root.mkdir()
-            a._write_atomic(root / "deep/a.txt", b"x")
+            a.write_atomic(root / "deep/a.txt", b"x")
             self.assertEqual(b"x", (root / "deep/a.txt").read_bytes())
             self.assertEqual([], [p.name for p in root.rglob("*.tmp")])
 
@@ -54,7 +54,12 @@ class ApplyTests(unittest.TestCase):
             root = Path(tmp) / "artefacts"
             root.mkdir()
             with self.assertRaises(ValidationError):
-                a._resolve_within(root, PurePosixPath("../escape.txt"))
+                resolve_within(
+                    root,
+                    root / "../escape.txt",
+                    ValidationError,
+                    "destination escapes artefacts directory",
+                )
 
     def test_an_orphan_is_never_unlinked(self) -> None:
         from artefact_sync import plan as p

@@ -6,15 +6,18 @@ from pathlib import Path, PurePosixPath
 
 from .config import Context
 from .errors import ValidationError
+from .manifest import resolve_within
 from .plan import DELETION_KINDS, WRITE_KINDS, SyncPlan
 from .render import extract_markdown
 
 
-def _resolve_within(root: Path, destination: PurePosixPath) -> Path:
-    resolved_root = root.resolve()
-    target = root / destination.as_posix()
-    if not target.resolve().is_relative_to(resolved_root):
-        raise ValidationError(f"destination escapes artefacts directory: {destination}")
+def _destination_path(root: Path, destination: PurePosixPath) -> Path:
+    target = resolve_within(
+        root,
+        root / destination.as_posix(),
+        ValidationError,
+        f"destination escapes artefacts directory: {destination}",
+    )
     current = root
     for component in destination.parts[:-1]:
         current /= component
@@ -23,7 +26,7 @@ def _resolve_within(root: Path, destination: PurePosixPath) -> Path:
     return target
 
 
-def _write_atomic(target: Path, data: bytes) -> None:
+def write_atomic(target: Path, data: bytes) -> None:
     target.parent.mkdir(parents=True, exist_ok=True)
     temporary_name = None
     try:
@@ -65,13 +68,13 @@ def apply_plan(context: Context, plan: SyncPlan) -> None:
     for change in plan.changes:
         if change.kind not in WRITE_KINDS:
             continue
-        target = _resolve_within(context.artefacts_root, change.destination)
-        _write_atomic(target, plan.desired_files[change.destination])
+        target = _destination_path(context.artefacts_root, change.destination)
+        write_atomic(target, plan.desired_files[change.destination])
 
     for change in plan.changes:
         if change.kind not in DELETION_KINDS:
             continue
-        target = _resolve_within(context.artefacts_root, change.destination)
+        target = _destination_path(context.artefacts_root, change.destination)
         if target.exists() or target.is_symlink():
             if not target.is_file() or target.is_symlink():
                 raise ValidationError(
@@ -87,11 +90,11 @@ def apply_plan(context: Context, plan: SyncPlan) -> None:
             parent = parent.parent
 
     for destination, expected in plan.desired_files.items():
-        target = _resolve_within(context.artefacts_root, destination)
+        target = _destination_path(context.artefacts_root, destination)
         if not target.is_file() or target.read_bytes() != expected:
             raise ValidationError(f"applied file differs from plan: {destination}")
     for change in plan.changes:
-        if change.kind in DELETION_KINDS and _resolve_within(
+        if change.kind in DELETION_KINDS and _destination_path(
             context.artefacts_root, change.destination
         ).exists():
             raise ValidationError(f"deleted file remains after apply: {change.destination}")

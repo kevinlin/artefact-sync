@@ -5,8 +5,8 @@ import re
 from dataclasses import dataclass, replace
 from pathlib import Path, PurePosixPath
 
-from . import manifest
 from .errors import ValidationError
+from .manifest import APPROVED_EXTENSIONS, is_ignored
 
 IGNORED_METADATA_NAMES = frozenset({".DS_Store", "Thumbs.db"})
 
@@ -39,16 +39,12 @@ def scan_source(source_root: Path, repo_root: Path) -> SourceInventory:
                 continue
             relative = PurePosixPath(path.relative_to(root).as_posix())
             suffix = path.suffix.lower()
-            if suffix in manifest.APPROVED_EXTENSIONS:
+            if suffix in APPROVED_EXTENSIONS:
                 approved.append(relative)
             else:
                 label = suffix or "(no suffix)"
                 skipped[label] = skipped.get(label, 0) + 1
     return SourceInventory(tuple(approved), tuple(sorted(skipped.items())))
-
-
-def is_ignored(source: PurePosixPath, rules: tuple[str, ...]) -> bool:
-    return manifest._is_ignored(source, rules)
 
 
 def apply_source_ignores(

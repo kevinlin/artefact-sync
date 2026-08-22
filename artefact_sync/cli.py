@@ -233,7 +233,7 @@ def _write_proposed_manifest(context: config.Context, sync_plan: plan_module.Syn
     ):
         return False
     body = manifest.manifest_to_json(sync_plan.next_manifest).encode("utf-8")
-    apply_module._write_atomic(context.artefacts_root / manifest.MANIFEST_NAME, body)
+    apply_module.write_atomic(context.artefacts_root / manifest.MANIFEST_NAME, body)
     return True
 
 
