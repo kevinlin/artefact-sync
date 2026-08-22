@@ -1741,7 +1741,7 @@ def _invert(stamp: str) -> str:
 Run: `python3 -m unittest tests.test_catalogue -v`
 Expected: PASS, 8 tests.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add artefact_sync/catalogue.py artefact_sync/assets/catalogue-template.html tests/test_catalogue.py
