@@ -704,7 +704,7 @@ everything else so a re-serialised manifest diffs cleanly.
 Run: `python3 -m unittest tests.test_manifest -v`
 Expected: PASS, 11 tests.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add artefact_sync/manifest.py tests/test_manifest.py
@@ -867,7 +867,7 @@ def check_published_invariants(current: Manifest, head: Manifest | None) -> None
 Run: `python3 -m unittest tests.test_manifest_invariants -v`
 Expected: PASS, 7 tests.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add artefact_sync/manifest.py tests/test_manifest_invariants.py
