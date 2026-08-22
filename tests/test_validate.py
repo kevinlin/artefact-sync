@@ -8,7 +8,7 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
-from artefact_sync import cli
+from artefact_sync import cli, validate
 from artefact_sync.config import Context, Site
 from artefact_sync.errors import ValidationError
 from artefact_sync.manifest import Manifest
@@ -31,7 +31,7 @@ class ValidateTests(unittest.TestCase):
             context = Context(root, root / "source", root / "artefacts", site)
             current = Manifest(1, site, (), (), (), ())
             with self.assertRaises(ValidationError) as caught:
-                cli.validate_repository(context, current)
+                validate.validate_repository(context, current)
         self.assertIn("site.catalogue", str(caught.exception))
 
     def test_a_freshly_initialised_repo_validates(self) -> None:
