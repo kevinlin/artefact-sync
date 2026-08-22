@@ -1074,7 +1074,7 @@ def apply_source_ignores(
 Run: `python3 -m unittest tests.test_scan -v`
 Expected: PASS, 9 tests.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add artefact_sync/scan.py tests/test_scan.py
@@ -1234,7 +1234,7 @@ def validate_svg(data: bytes, label: str) -> None:
 Run: `python3 -m unittest tests.test_svg -v`
 Expected: PASS, 11 tests.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add artefact_sync/scan.py tests/test_svg.py
