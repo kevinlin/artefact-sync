@@ -2249,7 +2249,7 @@ in `DELETION_KINDS`, re-reads each written file and compares to the desired byte
 Run: `python3 -m unittest tests.test_apply -v`
 Expected: PASS, 6 tests.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add artefact_sync/apply.py tests/test_apply.py
