@@ -2455,7 +2455,7 @@ destination repo and registers the vendor file in `protected_files` — without 
 and returns `None` when it cannot tell. M1 does not fetch the URL to verify the guess — that needs
 network and lands in M2 with the rest of the provider.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```python
 # tests/test_init.py
@@ -2551,12 +2551,12 @@ class InitTests(unittest.TestCase):
             self.assertIsNone(cli.derive_base_url(repo))
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `python3 -m unittest tests.test_init -v`
 Expected: FAIL — `module 'artefact_sync.cli' has no attribute 'derive_base_url'`.
 
-- [ ] **Step 3: Write minimal implementation**
+- [x] **Step 3: Write minimal implementation**
 
 ```python
 # append to artefact_sync/cli.py
@@ -2630,12 +2630,12 @@ def command_init(args: argparse.Namespace) -> int:
 Vendor the real `marked.min.js` into `artefact_sync/assets/` in this task. Record its version and
 licence in `SKILL.md`.
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `python3 -m unittest tests.test_init -v`
 Expected: PASS, 8 tests.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add artefact_sync/cli.py artefact_sync/assets/marked.min.js tests/test_init.py SKILL.md

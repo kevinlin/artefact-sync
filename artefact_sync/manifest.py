@@ -191,8 +191,10 @@ def manifest_from_dict(payload: dict) -> Manifest:
 def _is_ignored(source: PurePosixPath, rules: tuple[str, ...]) -> bool:
     text = source.as_posix()
     for rule in rules:
-        if rule.endswith("/") and text.startswith(rule):
-            return True
+        if rule.endswith("/"):
+            directory = rule.rstrip("/")
+            if ("/" not in directory and directory in source.parts[:-1]) or text.startswith(rule):
+                return True
         if any(char in rule for char in "*?[") and (
             fnmatch.fnmatchcase(text, rule) or fnmatch.fnmatchcase(source.name, rule)
         ):
