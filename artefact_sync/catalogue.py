@@ -32,7 +32,7 @@ def public_href(entry: Entry) -> str:
 
 
 def render_catalogue(manifest: Manifest, site: Site) -> str:
-    del site
+    # Hrefs stay relative so the same generated tree works at any site.base_url.
     entries_by_collection: dict[str, list[Entry]] = {}
     for entry in manifest.entries:
         entries_by_collection.setdefault(entry.collection, []).append(entry)
