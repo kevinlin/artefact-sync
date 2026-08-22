@@ -1,6 +1,6 @@
 # Design: artefact-sync
 
-Status: approved, not built
+Status: M1 built. `init`, `plan`, `sync` and `validate` ship; M2-M4 unbuilt.
 Date: 2026-08-22
 
 Refines [requirement_artefact-sync.md](requirement_artefact-sync.md) against what the prior art
@@ -48,7 +48,11 @@ Three state locations, one owner each.
 Single target. Re-run `init` to change it.
 
 `cli.py` resolves `(repo_root, source_root, site)` exactly once, before dispatch, into a frozen
-`Context` passed to every core function. No function below the CLI reads `~`, `cwd` or `__file__`.
+`Context` passed to every core function. No function below the CLI resolves a repository or source
+path from `~`, `cwd` or `__file__`. Reading `__file__` to find the package's own bundled assets is
+exempt: `render.load_template` and `catalogue.render_standalone_catalogue` fall back to
+`assets/` when the repo carries no override, and that lookup is relative to the installed skill by
+definition.
 That is what makes "works from any directory" true rather than aspirational: today
 `default_repo_root` derives the repo from the script's own parent, which after extraction points at
 the skill directory.
@@ -65,6 +69,11 @@ Manifest, `<repo>/artefacts/manifest.json`. Existing keys unchanged, one new sib
     site:  {base_url, favicon, catalogue: {mode: "standalone"} | {mode: "inject", page}}
     entry: {id, source, destination, title, collection, order, replacements,
             description?, date?}
+    collection: {id, title, description?, section, section_order, order}
+
+`Collection.description` is optional, replacing the prior art's mandatory
+`TODO: describe this collection.` placeholder. An absent optional field is omitted from the emitted
+JSON rather than written as `null`, or every manifest would churn on its first sync.
 
 `source` is relative to the source root, which lives in the pointer, so the manifest stays
 machine-independent. `description` and `date` are new; `Entry` has neither today and
@@ -90,7 +99,7 @@ Dependency direction is one-way, so the core is testable with no git, no network
     cli.py ──► config.py ──► pointer file, site block
       ├──► scan.py ──► manifest.py
       ├──► propose.py ──► manifest.py
-      ├──► plan.py ──► render.py, catalogue.py, scan.py
+      ├──► plan.py ──► render.py, catalogue.py, scan.py, propose.py
       ├──► apply.py ──► plan.py
       └──► publish.py ──► apply.py, provider.py, git
 
@@ -108,6 +117,9 @@ Dependency direction is one-way, so the core is testable with no git, no network
 | `provider.py` | `base_url(remote)` and `wait_for_build(commit)`, nothing else |
 
 `propose.py` is the only seam the model touches. It runs solely on sources with no existing entry.
+`plan.py` depends on it because `create_sync_plan` cannot classify a vanished source as a rename
+without proposing the replacement entry; routing that through `cli.py` would make the CLI
+reimplement the reconciliation `plan.py` already owns.
 
 ## Commands
 
@@ -116,9 +128,11 @@ Dependency direction is one-way, so the core is testable with no git, no network
 - `init` writes the pointer; creates `artefacts/` if absent (`manifest.json`,
   `page-template.html`, `vendor/marked.min.js`, a standalone `index.html`); seeds `ignored_sources`;
   guesses `base_url` from the git remote and fetches it once to check the guess. Wholly new.
-- `plan` is a pure read, grouped by consequence: new public URLs with byte sizes, changed content
+- `plan` reads and reports, grouped by consequence: new public URLs with byte sizes, changed content
   with diffs, URLs that will start 404-ing, warnings, blocked files. Full URLs, spelled out. Exits 3
-  when blocked.
+  when blocked. It is not a pure read on that one path: a blocked run writes the proposed
+  `manifest.json` and nothing else, which is what makes the two-step flow work — the first run
+  proposes, the user edits, the second publishes bytes.
 - `sync` runs `plan`, confirms, then applies. Atomic per file. Deletes `delete`, never `orphan`. Restores
   missing control files. A pure function of the source folder, which is the property everything else
   rests on.
@@ -166,8 +180,11 @@ enforcement, not ported behaviour, and that is where the implementation risk sit
    silently treats a destination edit as add-new plus delete-old.
 3. A source rename keeps its destination. Today the entry is dropped and a fresh destination
    derived from the new filename, so `Deploy Flow.png` → `Deploy Flow v3.png` quietly changes a live
-   URL. Detection is content-hash equality against the published bytes, which is exact for a rename.
-   When hashes do not match, `plan` asks rather than guessing.
+   URL. Detection is content-hash equality against the published bytes, which is exact for a rename
+   only where the published bytes ARE the source bytes: the byte-copy formats. A renamed `.md` needs
+   its published page's embedded source extracted before comparing, and a renamed `.html` has been
+   through `transform_html`, so its published bytes never equal its source. Both fall through to the
+   ambiguous case. When hashes do not match, `plan` asks rather than guessing.
 4. Orphans are never deleted. `orphan` leaves the deletion set, and `validate` downgrades it to a
    warning. An unmanaged file might be a hand-written page or a redirect.
 5. No auto-rollback, no force-push. Every failure stops and prints recovery for that exact state.
@@ -194,6 +211,9 @@ The template moves to `artefacts/page-template.html` and switches from `str.form
 braces; lifted verbatim into a `.html` file it would be neither valid nor previewable. `string.Template`
 is stdlib and ignores braces, so nothing needs escaping. Placeholders: `$title`, `$favicon`, `$prefix`,
 `$vendor`, `$markdown`, `$block_start`, `$block_end`.
+
+`manifest.json`, `index.html` and `page-template.html` are reserved destinations: no entry or
+protected file may claim one, or publishing would overwrite the template that renders it.
 
 Catalogue: generate a standalone `artefacts/index.html` by default; if `site.catalogue` names a host
 page containing the markers, inject there instead. Standalone generation does not exist today: the

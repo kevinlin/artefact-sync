@@ -2,6 +2,11 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
+**Status: complete.** All 16 tasks implemented; 131 tests pass on both `/usr/bin/python3` (3.9.6,
+the floor) and 3.13. Tasks 3-4, 5-6 and 7-8 share a file each and landed as one commit per pair; the
+rest got one commit apiece. Six review findings were fixed in a follow-up round, listed in
+"Deviations from this plan" below.
+
 **Goal:** Build the portable core of `artefact-sync` (`init`, `plan`, `sync`, `validate`), working
 against a local repo with no network access.
 
@@ -2944,6 +2949,61 @@ consumed in `apply.py` (Task 12) under that name. `markdown_vendor_path` is defi
 used in Task 14 with the same signature.
 
 ---
+
+## Deviations from this plan
+
+Recorded because the plan was written before the code existed, and a plan that hides where it was
+wrong is worth less on the next milestone.
+
+Plan defects found and corrected during implementation:
+
+- Task 10's `ProposalTests` body was `pass`, asserting nothing. Replaced with the rename assertion
+  the surrounding prose describes.
+- Task 12's first test was a conditional expression. It asserted nothing on its failing branch, so it
+  was rewritten to render through `render_markdown_page` and check the round trip for real.
+- Task 12 named both `apply_plan` and `apply_plan_files`. Standardised on the former.
+- Task 7's template, lifted from the prior art, kept `getElementById('markdown-source')` while the
+  new `BLOCK_START` renamed the id to `artefact-source`, and kept `src="$prefix$vendor"` while the
+  new caller already prefixes the path. Either would have shipped a broken page with every unit test
+  green — the vendor one because `../../vendor/...` is a substring of `../../../../vendor/...`. Both
+  fixed, both now pinned by exact assertions.
+- Task 7's template also kept `.replace(/^\n/, '')` in its JS, correct in the prior art where the
+  newline lived inside the block-start constant, wrong once it did not. It silently ate a leading
+  blank line in the browser while Python's round trip stayed green. Removed, and pinned by a test
+  that asserts on the template text, since no Python-only test can see it.
+- Task 13's fixtures needed a manifest before `resolve_context` could read the site block.
+- Task 3's `Collection.description` had to become optional. The plan's own fixtures already assumed
+  that; its port note never said so.
+
+Review findings fixed after Task 16:
+
+- The path-containment guard had been duplicated across `manifest.py` and `apply.py`, regressing a
+  one-implementation decision the prior art documents explicitly. Collapsed to
+  `manifest.resolve_within`, with `apply`'s extra symlinked-parent walk layered on top rather than
+  reimplemented beneath.
+- Private names were being imported across module boundaries. `manifest.is_ignored`,
+  `manifest.resolve_within` and `apply.write_atomic` are now public where they are owned.
+- Declining the `sync` confirmation exited 1 with no output. It still exits non-zero, so
+  `sync && publish` cannot proceed after a refusal, but it now says nothing was applied.
+- Two `assert` statements guarded a runtime path invariant and would vanish under `python -O`.
+  Replaced with `ValidationError`.
+- `validate_svg` sorted its findings as strings, so `:10` preceded `:2`. Now sorted numerically.
+
+Design corrections this implementation forced, applied to
+[design_artefact-sync.md](design_artefact-sync.md):
+
+- Rename-by-hash is exact only for byte-copy formats. Markdown must compare extracted embedded
+  source, and transformed HTML has no published bytes equal to its source at all.
+- The "nothing below the CLI reads `__file__`" rule is about repository and source resolution.
+  Bundled-asset fallback legitimately resolves relative to the installed package.
+- `plan.py` depends on `propose.py`, which the module graph omitted.
+- `plan` is not a pure read: its blocked path writes the proposed manifest.
+- `Collection.description` is optional, and absent optional fields are omitted rather than nulled.
+- `page-template.html` is a reserved destination alongside `manifest.json` and `index.html`.
+
+Scope left as the design's ladder intended: `add` is M3; `publish`, `provider.py` and `selfcheck.py`
+are M2. `init` guesses the Pages URL from the remote but does not fetch it to verify — that needs
+network and lands with the provider in M2.
 
 ## Milestones after M1
 
