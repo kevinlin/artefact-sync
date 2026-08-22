@@ -22,6 +22,10 @@ node_modules/
 # unittest / pytest run caches
 .pytest_cache/
 
+# macOS / Windows filesystem cruft
+.DS_Store
+Thumbs.db
+
 # Per-repo agent handoff runtime state: config, goal, jobs, receipts, handoffs, backups
 .partner/
 !.partner/config.toml
