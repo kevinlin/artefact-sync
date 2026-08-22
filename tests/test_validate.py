@@ -9,6 +9,9 @@ from pathlib import Path
 from unittest import mock
 
 from artefact_sync import cli
+from artefact_sync.config import Context, Site
+from artefact_sync.errors import ValidationError
+from artefact_sync.manifest import Manifest
 from tests.helpers import make_repo, make_source_tree
 
 
@@ -21,6 +24,16 @@ def seeded(root: Path) -> tuple[Path, Path, Path]:
 
 
 class ValidateTests(unittest.TestCase):
+    def test_validate_rejects_inject_mode_without_a_catalogue_page(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            site = Site("https://x.example/artefacts/", "", "inject", None)
+            context = Context(root, root / "source", root / "artefacts", site)
+            current = Manifest(1, site, (), (), (), ())
+            with self.assertRaises(ValidationError) as caught:
+                cli.validate_repository(context, current)
+        self.assertIn("site.catalogue", str(caught.exception))
+
     def test_a_freshly_initialised_repo_validates(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             _repo, _source, pointer = seeded(Path(tmp))

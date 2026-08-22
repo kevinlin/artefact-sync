@@ -184,7 +184,8 @@ def create_sync_plan(context: Context, manifest: Manifest) -> SyncPlan:
             next_manifest, context.site
         )
     else:
-        assert context.site.catalogue_page is not None
+        if context.site.catalogue_page is None:
+            raise ValidationError("site.catalogue inject mode needs a page")
         catalogue_path = context.site.catalogue_page
         target = context.artefacts_root / catalogue_path.as_posix()
         try:

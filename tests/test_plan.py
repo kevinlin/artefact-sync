@@ -1,9 +1,14 @@
 from __future__ import annotations
 
+import tempfile
 import unittest
-from pathlib import PurePosixPath
+from pathlib import Path, PurePosixPath
 
 from artefact_sync import plan as p
+from artefact_sync.config import Context, Site
+from artefact_sync.errors import ValidationError
+from artefact_sync.manifest import Manifest
+from tests.helpers import make_repo, make_source_tree
 
 
 class GroupingTests(unittest.TestCase):
@@ -63,3 +68,17 @@ class GroupingTests(unittest.TestCase):
     def test_no_emoji_anywhere_in_the_output(self) -> None:
         for char in p.format_plan(self._plan()):
             self.assertLess(ord(char), 0x2190, f"non-ascii-art character {char!r}")
+
+
+class CatalogueConfigTests(unittest.TestCase):
+    def test_plan_rejects_inject_mode_without_a_catalogue_page(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            repo = make_repo(root, {"README.md": b"x\n"})
+            source = make_source_tree(root, {})
+            site = Site("https://x.example/artefacts/", "", "inject", None)
+            context = Context(repo, source, repo / "artefacts", site)
+            current = Manifest(1, site, (), (), (), ())
+            with self.assertRaises(ValidationError) as caught:
+                p.create_sync_plan(context, current)
+        self.assertIn("site.catalogue", str(caught.exception))

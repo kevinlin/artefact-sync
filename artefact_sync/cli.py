@@ -161,7 +161,8 @@ def validate_repository(
         if context.site.catalogue_mode == "standalone"
         else context.site.catalogue_page
     )
-    assert catalogue_path is not None
+    if catalogue_path is None:
+        raise ValidationError("site.catalogue inject mode needs a page")
     expected = {
         *(PurePosixPath(name) for name in manifest.CONTROL_FILES),
         catalogue_path,
