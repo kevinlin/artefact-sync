@@ -2785,7 +2785,7 @@ git commit -m "feat(cli): plan, sync and validate commands with orphan warnings"
 - Consumes: the whole CLI.
 - Produces: nothing further. This task proves M1 is done.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```python
 # tests/test_m1_end_to_end.py
@@ -2880,25 +2880,25 @@ class EndToEndTests(unittest.TestCase):
         self.assertEqual("", result.stdout.strip())
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `python3 -m unittest tests.test_m1_end_to_end -v`
 Expected: FAIL on whatever seam is still incomplete.
 
-- [ ] **Step 3: Write minimal implementation**
+- [x] **Step 3: Write minimal implementation**
 
 Fix whatever the end-to-end test surfaces. Then write `SKILL.md`: what the tool does, the six
 commands, the two-step unlisted-source flow and why it exists, the manifest schema, how the model
 proposes entries for unseen files only, the irreversibility of publishing, and the vendored
 `marked.min.js` version and licence.
 
-- [ ] **Step 4: Run the whole suite**
+- [x] **Step 4: Run the whole suite**
 
 Run: `python3 -m unittest discover -s tests -t . -v`
 Expected: PASS, every test. Then confirm the floor:
 `/usr/bin/python3 -m unittest discover -s tests -t . -v` must also pass.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add tests/test_m1_end_to_end.py SKILL.md
