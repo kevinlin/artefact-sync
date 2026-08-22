@@ -1,12 +1,19 @@
 from __future__ import annotations
 
+import contextlib
+import io
 import json
+import subprocess
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 from artefact_sync import cli, manifest
 from tests.helpers import make_repo, make_source_tree
+
+ENV = {"PATH": "/usr/bin:/bin:/usr/local/bin"}
+
 
 class InitTests(unittest.TestCase):
     def _init(self, root: Path) -> tuple[Path, Path, Path]:
@@ -69,3 +76,49 @@ class InitTests(unittest.TestCase):
                             "--repo", str(repo), "--source", str(source)])
             self.assertEqual(cli.EXIT_OK, code)
             self.assertEqual(before, marker.read_bytes())
+
+
+class InitVerificationTests(unittest.TestCase):
+    def _run(self, status: int) -> tuple[int, str, mock.Mock]:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            repo = make_repo(root, {"README.md": b"x\n"})
+            subprocess.run(
+                ["git", "remote", "add", "origin", "https://github.com/someone/notes.git"],
+                cwd=repo, env=ENV, check=True,
+            )
+            source = make_source_tree(root, {})
+            output = io.StringIO()
+            with mock.patch.object(cli.provider, "fetch", return_value=status) as fetch:
+                with contextlib.redirect_stdout(output):
+                    code = cli.main(["init", "--pointer", str(root / "pointer.json"),
+                                     "--repo", str(repo), "--source", str(source)])
+        return code, output.getvalue(), fetch
+
+    def test_reports_a_reachable_pages_url(self) -> None:
+        code, output, fetch = self._run(200)
+        self.assertEqual(cli.EXIT_OK, code)
+        fetch.assert_called_once_with("https://someone.github.io/notes/artefacts/")
+        self.assertIn("verified https://someone.github.io/notes/artefacts/", output)
+
+    def test_warns_but_still_succeeds_when_the_url_is_not_live(self) -> None:
+        code, output, _fetch = self._run(404)
+        self.assertEqual(cli.EXIT_OK, code)
+        self.assertIn("returned 404", output)
+        self.assertIn("site.base_url", output)
+
+    def test_warns_when_the_request_never_completes(self) -> None:
+        code, output, _fetch = self._run(0)
+        self.assertEqual(cli.EXIT_OK, code)
+        self.assertIn("did not respond", output)
+
+    def test_never_fetches_without_a_remote(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            repo = make_repo(root, {"README.md": b"x\n"})
+            source = make_source_tree(root, {})
+            with mock.patch.object(cli.provider, "fetch") as fetch:
+                with contextlib.redirect_stdout(io.StringIO()):
+                    cli.main(["init", "--pointer", str(root / "pointer.json"),
+                              "--repo", str(repo), "--source", str(source)])
+        fetch.assert_not_called()

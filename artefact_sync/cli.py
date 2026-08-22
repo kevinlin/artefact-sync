@@ -90,7 +90,21 @@ def command_init(args: argparse.Namespace) -> int:
     print(f"seeded {artefacts}")
     if guessed_url is None:
         print("could not derive a Pages URL from origin; set site.base_url in the manifest")
+    else:
+        _report_base_url(loaded.site.base_url)
     return EXIT_OK
+
+
+def _report_base_url(base_url: str) -> None:
+    """Fetch the configured base URL once, so a wrong guess surfaces now, not at publish."""
+    status = provider.fetch(base_url)
+    if status == 200:
+        print(f"verified {base_url}")
+    elif status == 0:
+        print(f"warning: {base_url} did not respond; check site.base_url in the manifest")
+    else:
+        print(f"warning: {base_url} returned {status}; check site.base_url in the manifest "
+              "and that Pages is enabled for this repository")
 
 
 class _ReferenceParser(HTMLParser):
