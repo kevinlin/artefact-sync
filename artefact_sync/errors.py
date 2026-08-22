@@ -25,3 +25,7 @@ class UnlistedSources(ArtefactSyncError):
     def __init__(self, sources: tuple[PurePosixPath, ...]) -> None:
         super().__init__(f"{len(sources)} approved source(s) have no manifest entry")
         self.sources = sources
+
+
+class PublishError(ArtefactSyncError):
+    """A publish step failed. The message carries recovery for that exact state."""

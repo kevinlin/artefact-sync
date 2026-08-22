@@ -3,22 +3,19 @@ from __future__ import annotations
 import argparse
 from collections import Counter
 from html.parser import HTMLParser
-import re
 import shutil
-import subprocess
 import sys
 from pathlib import Path, PurePosixPath
 from urllib.parse import unquote, urlsplit
 
 from . import apply as apply_module
-from . import catalogue, config, manifest, plan as plan_module, render, scan
+from . import catalogue, config, manifest, plan as plan_module, provider, render, scan
 from .errors import ArtefactSyncError, ConfigError, UnlistedSources, ValidationError
 
 EXIT_OK = 0
 EXIT_ERROR = 1
 EXIT_BLOCKED = 3
 SEED_IGNORES = ("prompts/", "drafts/", "*.local.*", ".*")
-_GITHUB = re.compile(r"(?:git@github\.com:|https://github\.com/)([^/]+)/(.+?)(?:\.git)?/?$")
 
 
 def _add_context_args(parser: argparse.ArgumentParser) -> None:
@@ -52,24 +49,6 @@ def resolve_context(args: argparse.Namespace) -> config.Context:
     return config.build_context(pointer, site)
 
 
-def derive_base_url(repo_root: Path) -> str | None:
-    result = subprocess.run(
-        ["git", "remote", "get-url", "origin"],
-        cwd=str(repo_root),
-        capture_output=True,
-        text=True,
-    )
-    if result.returncode != 0:
-        return None
-    match = _GITHUB.search(result.stdout.strip())
-    if not match:
-        return None
-    owner, repo = match.group(1), match.group(2)
-    if repo.lower() == f"{owner.lower()}.github.io":
-        return f"https://{owner}.github.io/"
-    return f"https://{owner}.github.io/{repo}/"
-
-
 def command_init(args: argparse.Namespace) -> int:
     repo_root = (args.repo or Path.cwd()).expanduser().resolve()
     if not repo_root.is_dir():
@@ -88,7 +67,7 @@ def command_init(args: argparse.Namespace) -> int:
         if not target.is_file():
             shutil.copyfile(assets / name, target)
 
-    guessed_url = derive_base_url(repo_root)
+    guessed_url = provider.derive_base_url(repo_root)
     manifest_path = artefacts / manifest.MANIFEST_NAME
     if not manifest_path.is_file():
         seeded = manifest.Manifest(

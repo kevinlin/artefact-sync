@@ -1,16 +1,12 @@
 from __future__ import annotations
 
 import json
-import subprocess
 import tempfile
 import unittest
 from pathlib import Path
 
 from artefact_sync import cli, manifest
 from tests.helpers import make_repo, make_source_tree
-
-ENV = {"PATH": "/usr/bin:/bin:/usr/local/bin"}
-
 
 class InitTests(unittest.TestCase):
     def _init(self, root: Path) -> tuple[Path, Path, Path]:
@@ -73,24 +69,3 @@ class InitTests(unittest.TestCase):
                             "--repo", str(repo), "--source", str(source)])
             self.assertEqual(cli.EXIT_OK, code)
             self.assertEqual(before, marker.read_bytes())
-
-    def test_derives_a_user_pages_base_url_from_the_remote(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
-            repo = make_repo(Path(tmp), {"README.md": b"x\n"})
-            subprocess.run(["git", "remote", "add", "origin",
-                            "git@github.com:someone/someone.github.io.git"],
-                           cwd=repo, env=ENV, check=True)
-            self.assertEqual("https://someone.github.io/", cli.derive_base_url(repo))
-
-    def test_derives_a_project_pages_base_url_from_the_remote(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
-            repo = make_repo(Path(tmp), {"README.md": b"x\n"})
-            subprocess.run(["git", "remote", "add", "origin",
-                            "https://github.com/someone/notes.git"],
-                           cwd=repo, env=ENV, check=True)
-            self.assertEqual("https://someone.github.io/notes/", cli.derive_base_url(repo))
-
-    def test_returns_none_when_the_remote_is_unrecognised(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
-            repo = make_repo(Path(tmp), {"README.md": b"x\n"})
-            self.assertIsNone(cli.derive_base_url(repo))
