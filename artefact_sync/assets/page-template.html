@@ -169,7 +169,7 @@ $block_start$markdown$block_end
     <script src="$vendor"></script>
     <script>
         (function () {
-            var raw = document.getElementById('artefact-source').textContent.replace(/^\n/, '');
+            var raw = document.getElementById('artefact-source').textContent;
             var text = raw.replace(/<(\\+)(\/script|!--)/gi, function (match, slashes, marker) {
                 return '<' + slashes.slice(1) + marker;
             });

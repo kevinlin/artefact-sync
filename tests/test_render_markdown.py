@@ -20,6 +20,13 @@ ENTRY = Entry(
 
 
 class RoundTripTests(unittest.TestCase):
+    def test_a_leading_blank_line_survives_embedding_and_extraction(self) -> None:
+        body = "\n# Title\n"
+        page = render.render_markdown_page(
+            ENTRY, body.encode("utf-8"), PurePosixPath("vendor/marked.min.js"), SITE, TEMPLATE
+        )
+        self.assertEqual(body, render.extract_markdown(page.decode("utf-8")))
+
     def test_markdown_survives_embedding_and_extraction(self) -> None:
         body = "# Title\n\nText with `code` and trailing spaces   \n"
         page = render.render_markdown_page(
@@ -86,3 +93,7 @@ class TemplateTests(unittest.TestCase):
         ).decode("utf-8")
         self.assertIn('id="artefact-source"', page)
         self.assertIn("getElementById('artefact-source')", page)
+
+    def test_the_browser_does_not_strip_a_leading_source_newline(self) -> None:
+        raw = Path("artefact_sync/assets/page-template.html").read_text(encoding="utf-8")
+        self.assertNotIn(r".replace(/^\n/, '')", raw)
