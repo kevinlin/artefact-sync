@@ -1,0 +1,24 @@
+{
+  "files": [
+    {
+      "backup": null,
+      "existed": false,
+      "path": "/Users/keli/dev/ai-practitioner/artefact-sync/.handoff/config.toml"
+    },
+    {
+      "backup": null,
+      "existed": false,
+      "path": "/Users/keli/dev/ai-practitioner/artefact-sync/.claude/agents/handoff-deep-reasoner.md"
+    },
+    {
+      "backup": null,
+      "existed": false,
+      "path": "/Users/keli/dev/ai-practitioner/artefact-sync/.handoff/.generated-manifest"
+    },
+    {
+      "backup": "files/003-exclude",
+      "existed": true,
+      "path": "/Users/keli/dev/ai-practitioner/artefact-sync/.git/info/exclude"
+    }
+  ]
+}
