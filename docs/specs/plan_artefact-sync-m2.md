@@ -2314,15 +2314,15 @@ Plan defects found and corrected during implementation:
   never satisfy. The check was meant to prove the *definition* left `cli.py`, so it is now
   `'def validate_repository' in src`. Implementation first satisfied the literal grep by building
   the attribute name as `getattr(validate, "validate_" + "repository")`; review reversed that. A
-  check that a readable call cannot pass is the defective half, and hiding a real dependency from
-  grep and every static analyser is a worse outcome than the check it buys.
+  check that a readable call cannot pass is the defective half. Hiding a real dependency from grep
+  and every static analyser costs more than the check buys.
 - Task 5's arithmetic was off by one. Step 1 defines fourteen `PreflightTests` methods, Step 6
   states thirteen, and every later count inherits the error. The corrected chain is 162 after
   Task 5, 169 after Task 6, 181 after Task 7, and **195** at the end of M2, not 194.
   Implementation first hit the stated thirteen by merging `test_rejects_a_missing_git` and
   `test_rejects_a_missing_github_cli` into one subTest loop; review reversed that too. Two failures
-  with different messages, on different missing binaries, are two tests, and a subTest loop hides
-  which half broke behind one red result.
+  on different missing binaries, are two tests. A subTest loop hides which half broke behind one
+  red result.
 
 Both defects were first resolved by bending code to a stated number rather than fixing the number.
 Worth naming as a pattern for M3: a count in a plan is a prediction, and the tests are the fact.
@@ -2331,8 +2331,8 @@ Review findings fixed after Task 9:
 
 - None. The live run passed all fifteen rows against `kevinlin/artefact-sync-probe` on 2026-08-23
   and forced no code change; the record is [m2-acceptance.md](m2-acceptance.md). Row 11 ran by
-  substitution — a stub `gh` whose `auth status` exits 1, because `gh auth logout` cannot be
-  undone without an interactive browser login — and exercises the same preflight branch.
+  substitution: a stub `gh` whose `auth status` exits 1, because `gh auth logout` cannot be undone
+  without an interactive browser login. It exercises the same preflight branch.
 
 The run did surface two defects, both in M1 code rather than M2's, and both left for M3, which the
 plan's own milestone list already scopes as "whatever `plan`'s warnings need after the Task 9 run
@@ -2340,8 +2340,8 @@ exposes them":
 
 - `plan.create_sync_plan` computes orphans as `scan_published_tree - expected` without subtracting
   the destinations already queued as `delete` changes, so a file being deleted in this run is also
-  reported as `in repo, in no manifest, left alone`. Behaviour is correct — `apply` acts on changes,
-  not notes, and row 10 confirmed the file really goes — but the sentence is false as printed, and
+  reported as `in repo, in no manifest, left alone`. Behaviour is correct: `apply` acts on changes,
+  not notes, and row 10 confirmed the file really goes. The sentence is still false as printed, and
   it is the sentence that carries design invariant 4's promise to the user.
 - `propose` names a collection of root-level sources after whichever file sorts first
   (`_source_group` returns `""`, so the label falls through to `sources[0].stem`). The grouping is

@@ -46,16 +46,16 @@ Two defects, neither in M2's own code, both surfaced only because a real publish
 **The orphan warning contradicts the deletion it accompanies.** In `plan.create_sync_plan`, the
 orphan scan is `scan_published_tree(artefacts_root) - expected`, and `expected` does not subtract
 the destinations already queued as `delete` changes. So a file being deleted in this very run is
-also reported as `in repo, in no manifest, left alone`. The behaviour is correct — `apply` acts on
-changes, not on notes, and row 10 confirmed the file really goes — but the sentence is false as
+also reported as `in repo, in no manifest, left alone`. The behaviour is correct: `apply` acts on
+changes, not on notes, and row 10 confirmed the file really goes. The sentence is still false as
 printed. It matters more than a cosmetic slip: design invariant 4 makes "orphans are never deleted"
 a promise to the user, and printing that promise about a file being deleted is exactly the case
 where a user needs the output to be trustworthy. One line fixes it, plus a test.
 
 **`propose` names a root-level collection after its alphabetically first file.** Row 5. Grouping
 every root-level source into one collection is right; calling that collection `probe-curve` because
-`probe-curve.png` sorts first is not. Only the first run is arbitrary — the collection is in the
-manifest by the second — but the first run is the one a new user sees.
+`probe-curve.png` sorts first is not. Only the first run is arbitrary, since the collection is in
+the manifest by the second. The first run is the one a new user sees.
 
 Both belong to M3, which the plan already scopes as "`add <path>`, and whatever `plan`'s warnings
 need after the Task 9 run exposes them". Neither was fixed here; expanding M2 to cover them would
