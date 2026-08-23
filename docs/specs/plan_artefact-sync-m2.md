@@ -2329,18 +2329,30 @@ Worth naming as a pattern for M3: a count in a plan is a prediction, and the tes
 
 Review findings fixed after Task 9:
 
-- Task 9's live run (its Steps 3 and 4) has not been run yet; it needs a disposable public
-  repository under the user's own account. Everything else in Task 9 — the `SKILL.md` publish
-  section and the acceptance checklist at `docs/specs/m2-acceptance.md` — is in place, with the
-  checklist left at `Status: not yet run`. This section stays open until that run happens, and
-  M2 is not complete until it does.
+- None. The live run passed all fifteen rows against `kevinlin/artefact-sync-probe` on 2026-08-23
+  and forced no code change; the record is [m2-acceptance.md](m2-acceptance.md). Row 11 ran by
+  substitution — a stub `gh` whose `auth status` exits 1, because `gh auth logout` cannot be
+  undone without an interactive browser login — and exercises the same preflight branch.
+
+The run did surface two defects, both in M1 code rather than M2's, and both left for M3, which the
+plan's own milestone list already scopes as "whatever `plan`'s warnings need after the Task 9 run
+exposes them":
+
+- `plan.create_sync_plan` computes orphans as `scan_published_tree - expected` without subtracting
+  the destinations already queued as `delete` changes, so a file being deleted in this run is also
+  reported as `in repo, in no manifest, left alone`. Behaviour is correct — `apply` acts on changes,
+  not notes, and row 10 confirmed the file really goes — but the sentence is false as printed, and
+  it is the sentence that carries design invariant 4's promise to the user.
+- `propose` names a collection of root-level sources after whichever file sorts first
+  (`_source_group` returns `""`, so the label falls through to `sources[0].stem`). The grouping is
+  right and only the first run is arbitrary, but the first run is the one a new user sees.
 
 Design corrections this implementation forced:
 
-- None. The six corrections the plan itself carries (M1-a, M2-a through M2-f) all held as written;
-  nothing in Tasks 1-8 disproved a claim in [design_artefact-sync.md](design_artefact-sync.md). The
-  live run is the step with the standing power to disprove one, since it covers exactly what the
-  recorded fake world mocks out.
+- None. The six corrections the plan itself carries (M1-a, M2-a through M2-f) all held as written,
+  and M1-a proved itself live at row 2: the seeded base URL matched the Pages settings URL exactly,
+  which M1's one-segment-short guess would not have. Nothing in Tasks 1-9 disproved a claim in
+  [design_artefact-sync.md](design_artefact-sync.md).
 
 ## Milestones after M2
 
