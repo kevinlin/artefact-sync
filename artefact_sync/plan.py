@@ -45,6 +45,9 @@ class SyncPlan:
     blocked: tuple[Blocked, ...]
     desired_files: dict[PurePosixPath, bytes]
     next_manifest: Manifest | None
+    # Two of the closed allowlist's three outcomes. Defaulted so M1/M2 constructions still work.
+    excluded: tuple[tuple[str, int], ...] = ()
+    ignored: tuple[tuple[str, int], ...] = ()
 
 
 def _public_href(destination: PurePosixPath) -> str:
@@ -156,7 +159,7 @@ def _source_notes(context: Context, manifest: Manifest, desired_files) -> list[N
 
 def create_sync_plan(context: Context, manifest: Manifest) -> SyncPlan:
     declared = manifest_module.normalize_orders(manifest)
-    inventory, _ignore_counts = scan.apply_source_ignores(
+    inventory, ignore_counts = scan.apply_source_ignores(
         scan.scan_source(context.source_root, context.repo_root), declared.ignored_sources
     )
     approved = set(inventory.approved)
@@ -287,6 +290,8 @@ def create_sync_plan(context: Context, manifest: Manifest) -> SyncPlan:
         blocked=tuple(blocked),
         desired_files=desired_files,
         next_manifest=next_manifest,
+        excluded=inventory.excluded,
+        ignored=tuple((rule, count) for rule, count in ignore_counts if count),
     )
 
 
@@ -322,9 +327,20 @@ def format_plan(plan: SyncPlan) -> str:
             lines.append(f"  {change.url}{'  ' + detail if detail else ''}")
         blocks.append("\n".join(lines))
 
+    excluded_rows = [(label, count, "unsupported type") for label, count in plan.excluded]
+    excluded_rows += [
+        (rule, count, "matched an ignored source rule") for rule, count in plan.ignored
+    ]
+    if excluded_rows:
+        lines = [f"EXCLUDED ({sum(count for _, count, _ in excluded_rows)})"]
+        for label, count, reason in excluded_rows:
+            files = "1 file" if count == 1 else f"{count} files"
+            lines.append(f"  {label:<14} {files}, {reason}")
+        blocks.append("\n".join(lines))
+
     if plan.notes:
         lines = [f"WARNINGS ({len(plan.notes)})"]
-        for note in plan.notes:
+        for note in sorted(plan.notes, key=lambda item: (item.kind, item.where)):
             lines.append(f"  {note.kind:<9} {note.where}    {note.detail}")
         blocks.append("\n".join(lines))
 

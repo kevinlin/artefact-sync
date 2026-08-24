@@ -105,7 +105,7 @@ def validate_repository(
         except (OSError, UnicodeError) as error:
             raise ValidationError(f"cannot parse HTML file {path}: {error}") from error
         for line, url in render.external_references(text):
-            notes.append(plan_module.Note("external", f"artefacts/{relative}:{line}", url))
+            notes.append(plan_module.external_note(f"artefacts/{relative}:{line}", url))
         for reference in _parse_references(text).references:
             target = _local_reference(context, path, reference)
             if target is not None and not target.is_file():

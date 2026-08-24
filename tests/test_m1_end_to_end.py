@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import contextlib
+import io
 import json
 import tempfile
 import unittest
@@ -68,7 +70,7 @@ class EndToEndTests(unittest.TestCase):
             after = {p: p.read_bytes() for p in sorted(published.rglob("*")) if p.is_file()}
             self.assertEqual(before, after)
 
-    def test_a_dirty_svg_blocks_the_whole_run(self) -> None:
+    def test_a_dirty_svg_blocks_the_run_and_names_the_line(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             repo = make_repo(root, {"README.md": b"x\n"})
@@ -76,7 +78,18 @@ class EndToEndTests(unittest.TestCase):
             pointer = root / "pointer.json"
             cli.main(["init", "--pointer", str(pointer),
                       "--repo", str(repo), "--source", str(source)])
-            self.assertEqual(cli.EXIT_BLOCKED, cli.main(["plan", "--pointer", str(pointer)]))
+            buffer = io.StringIO()
+            with contextlib.redirect_stdout(buffer):
+                code = cli.main(["plan", "--pointer", str(pointer)])
+                # The first run also blocks for the unlisted source, and writes its proposal.
+                # The second run has the entry, so only the SVG itself can still block it.
+                second = cli.main(["plan", "--pointer", str(pointer)])
+            text = buffer.getvalue()
+        self.assertEqual(cli.EXIT_BLOCKED, code)
+        self.assertEqual(cli.EXIT_BLOCKED, second)
+        blocked = text[text.index("BLOCKED"):]
+        self.assertIn("d/bad.svg:2", blocked)
+        self.assertIn("script element", blocked)
 
     def test_the_prior_art_repo_is_never_touched(self) -> None:
         import subprocess

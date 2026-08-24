@@ -125,3 +125,98 @@ class OrphanNoteTests(unittest.TestCase):
             ["artefacts/redirect.html"],
             [note.where for note in sync_plan.notes if note.kind == "orphan"],
         )
+
+
+class ExcludedBlockTests(unittest.TestCase):
+    def test_unsupported_files_are_summarised(self) -> None:
+        text = p.format_plan(
+            p.SyncPlan(
+                changes=(), notes=(), blocked=(), desired_files={}, next_manifest=None,
+                excluded=((".psd", 1), (".mp4", 2)),
+            )
+        )
+        self.assertIn("EXCLUDED (3)", text)
+        self.assertIn(".psd", text)
+        self.assertIn("1 file, unsupported type", text)
+        self.assertIn("2 files, unsupported type", text)
+
+    def test_ignored_files_are_summarised(self) -> None:
+        text = p.format_plan(
+            p.SyncPlan(
+                changes=(), notes=(), blocked=(), desired_files={}, next_manifest=None,
+                ignored=(("drafts/", 3),),
+            )
+        )
+        self.assertIn("EXCLUDED (3)", text)
+        self.assertIn("drafts/", text)
+        self.assertIn("3 files, matched an ignored source rule", text)
+
+    def test_excluded_heading_totals_all_reasons(self) -> None:
+        text = p.format_plan(
+            p.SyncPlan(
+                changes=(), notes=(), blocked=(), desired_files={}, next_manifest=None,
+                excluded=((".psd", 1),), ignored=(("drafts/", 3),),
+            )
+        )
+        self.assertIn("EXCLUDED (4)", text)
+
+    def test_nothing_excluded_prints_no_heading(self) -> None:
+        text = p.format_plan(
+            p.SyncPlan(changes=(), notes=(), blocked=(), desired_files={}, next_manifest=None)
+        )
+        self.assertNotIn("EXCLUDED", text)
+
+    def test_excluded_sits_between_the_change_groups_and_the_warnings(self) -> None:
+        text = p.format_plan(
+            p.SyncPlan(
+                changes=(p.Change("delete", PurePosixPath("old.pdf"), None, None,
+                                  "https://x.example/artefacts/old.pdf", None),),
+                notes=(p.Note("orphan", "artefacts/redirect.html", "kept"),),
+                blocked=(), desired_files={}, next_manifest=None,
+                excluded=((".psd", 1),), ignored=(),
+            )
+        )
+        self.assertLess(text.index("WILL START 404-ING"), text.index("EXCLUDED"))
+        self.assertLess(text.index("EXCLUDED"), text.index("WARNINGS"))
+
+    def test_a_real_scan_reports_its_own_exclusions(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            repo = make_repo(root, {"README.md": b"x\n"})
+            source = make_source_tree(root, {
+                "keep.png": b"1", "notes.psd": b"binary", "drafts/wip.md": b"# wip\n",
+            })
+            pointer = root / "pointer.json"
+            cli.main(["init", "--pointer", str(pointer),
+                      "--repo", str(repo), "--source", str(source)])
+            context = cli.resolve_context(cli.parse_args(["plan", "--pointer", str(pointer)]))
+            sync_plan = p.create_sync_plan(
+                context, manifest_module.load_manifest(context.artefacts_root))
+        self.assertIn((".psd", 1), sync_plan.excluded)
+        self.assertIn(("drafts/", 1), sync_plan.ignored)
+        self.assertNotIn(("*.local.*", 0), sync_plan.ignored)
+
+
+class WarningOrderTests(unittest.TestCase):
+    def _format(self) -> str:
+        return p.format_plan(
+            p.SyncPlan(
+                changes=(),
+                notes=(
+                    p.Note("secret", "z.md:1", "looks like an API key"),
+                    p.Note("orphan", "artefacts/b.html", "in repo, in no manifest, left alone"),
+                    p.Note("external", "a.html:9", "loads https://unpkg.example/x.js at runtime"),
+                    p.Note("orphan", "artefacts/a.html", "in repo, in no manifest, left alone"),
+                ),
+                blocked=(), desired_files={}, next_manifest=None,
+            )
+        )
+
+    def test_warnings_are_grouped_by_kind(self) -> None:
+        text = self._format()
+        rows = [line.split()[0] for line in text.splitlines() if line.startswith("  ")]
+        self.assertEqual(["external", "orphan", "orphan", "secret"], rows)
+
+    def test_warnings_are_ordered_within_a_kind(self) -> None:
+        text = self._format()
+        self.assertLess(text.index("artefacts/a.html"), text.index("artefacts/b.html"))

@@ -1236,8 +1236,14 @@ Plan defects found and corrected during implementation:
 - Task 3 combined the AWS-key and private-key failures in one test method. They are distinct secret
   shapes, so implementation split them into distinct methods. Task 3 therefore ended at **209**
   tests, not 208.
+- Task 4 Step 2 predicted the strengthened SVG test would fail before implementation. It passed:
+  `_svg_blocks` already put `d/bad.svg:2` and `script element` in the blocked section. The old test
+  was weak, but the link it failed to prove was working.
+- Task 4 combined unsupported files, ignored files and their total in one test, and combined warning
+  kind order with within-kind path order in another. Those are distinct failures, so implementation
+  gave each its own method. Task 4 added eight methods and ended at **217** tests, not 213.
 
-No correction to [design_artefact-sync.md](design_artefact-sync.md) was required by Tasks 1-3.
+No correction to [design_artefact-sync.md](design_artefact-sync.md) was required by Tasks 1-4.
 
 ## Milestones after M3
 
