@@ -1,0 +1,39 @@
+schema_version = 2
+revision = 0
+
+[hosts.claude_code.identities.deep_reasoner]
+backend = "claude"
+model = "opus"
+effort = "xhigh"
+verified = true
+verified_at = "2026-08-24T02:29:12Z"
+
+[hosts.claude_code.identities.fast_worker]
+backend = "codex"
+model = "gpt-5.6-sol"
+effort = "high"
+verified = true
+verified_at = "2026-08-24T02:29:12Z"
+
+[hosts.claude_code.identities.arbiter]
+backend = "codex"
+model = "gpt-5.6-sol"
+effort = "xhigh"
+verified = true
+verified_at = "2026-08-24T02:29:12Z"
+
+[hosts.claude_code.identities.e2e_specifier]
+backend = "claude"
+model = "opus"
+effort = "xhigh"
+verified = true
+verified_at = "2026-08-24T02:29:12Z"
+
+[hosts.claude_code.identities.e2e_verifier]
+backend = "codex"
+model = "gpt-5.6-sol"
+effort = "high"
+verified = true
+verified_at = "2026-08-24T02:29:12Z"
+[routing]
+always_on_host_rules = false

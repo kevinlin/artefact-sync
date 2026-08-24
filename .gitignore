@@ -27,7 +27,7 @@ node_modules/
 Thumbs.db
 
 # Per-repo agent handoff runtime state: config, goal, jobs, receipts, handoffs, backups
-.partner/
+.partner/*
 !.partner/config.toml
-.handoff/
+.handoff/*
 !.handoff/config.toml
