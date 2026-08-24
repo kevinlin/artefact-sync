@@ -10,6 +10,9 @@ from .manifest import Collection, DIRECTORY_INDEX_EXTENSIONS, Entry, Manifest, v
 
 DEFAULT_SECTION = "Artefacts"
 DEFAULT_DESCRIPTION = None
+# Root-level sources have no directory to name their collection after. Naming it for whichever
+# file sorts first is arbitrary, and the arbitrary run is the first one a new user sees.
+ROOT_COLLECTION_LABEL = "General"
 SLUG_SEPARATOR = re.compile(r"[^a-z0-9]+")
 LEADING_NUMBER = re.compile(r"^\d+[-_ ]+")
 WORD_SEPARATOR = re.compile(r"[-_]+")
@@ -147,7 +150,7 @@ def propose_manifest_additions(
         if collection_id is None and group and _slug(group) in collection_ids:
             collection_id = _slug(group)
         if collection_id is None:
-            label = group or sources[0].stem
+            label = group or ROOT_COLLECTION_LABEL
             collection_id = _unique_id(_slug(label), collection_ids)
             collection_ids.add(collection_id)
             collection_order += 10

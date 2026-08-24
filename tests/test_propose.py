@@ -92,3 +92,30 @@ class ProposalTests(unittest.TestCase):
         self.assertEqual(PurePosixPath("d/new.png"), result.entries[0].source)
         self.assertEqual(PurePosixPath("d/stable.png"), result.entries[0].destination)
         self.assertEqual("Stable title", result.entries[0].title)
+
+
+SITE = site_from_dict({"base_url": "https://x.example/artefacts/"})
+
+
+class RootCollectionTests(unittest.TestCase):
+    def _propose(self, files: dict) -> Manifest:
+        with tempfile.TemporaryDirectory() as tmp:
+            source = make_source_tree(Path(tmp), files)
+            empty = Manifest(1, SITE, (), (), (), ())
+            return propose.propose_manifest_additions(
+                empty,
+                tuple(PurePosixPath(name) for name in sorted(files)),
+                {},
+                source,
+            )
+
+    def test_root_level_sources_are_not_named_after_their_first_file(self) -> None:
+        result = self._propose({"curve.png": b"1", "note.md": b"# Note\n"})
+        self.assertEqual(("general",), tuple(c.id for c in result.collections))
+        self.assertEqual(("General",), tuple(c.title for c in result.collections))
+        self.assertEqual({"general"}, {entry.collection for entry in result.entries})
+
+    def test_a_subdirectory_still_names_its_own_collection(self) -> None:
+        result = self._propose({"talk/curve.png": b"1"})
+        self.assertEqual(("talk",), tuple(c.id for c in result.collections))
+        self.assertEqual(("Talk",), tuple(c.title for c in result.collections))
