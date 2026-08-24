@@ -103,34 +103,54 @@ _SECRET_RULES = (
     (re.compile(r"\bghp_[A-Za-z0-9]{36}\b"), "looks like a GitHub token"),
     (re.compile(r"\b[a-fA-F0-9]{40,}\b"), "contains a long hexadecimal secret shape"),
 )
-_PRIVATE_NAME = re.compile(r"(?:^|/)(?:prompts?|drafts?|internal|client)(?:/|[-_.])", re.I)
+# Word-boundary, not component-prefix: the shipped rule missed "Client Presentation.pdf",
+# "Internal Notes.html" and "q1-internal-review.md", which are the shapes a real folder holds.
+_PRIVATE_WORD = re.compile(r"(?<![a-z0-9])(?:prompts?|drafts?|internal|client)(?![a-z0-9])", re.I)
+
+TEXT_SUFFIXES = frozenset({".html", ".md", ".svg"})
+
+
+def external_note(where: str, url: str) -> Note:
+    return Note("external", where, f"loads {url} at runtime")
+
+
+def source_warnings(source: PurePosixPath, text: str | None) -> list[Note]:
+    """Filename heuristics plus secret shapes for one source. `text` is None for binary sources."""
+    label = source.as_posix()
+    notes = []
+    match = _PRIVATE_WORD.search(label)
+    if match is not None:
+        notes.append(Note("secret", label, f'filename contains "{match.group(0).lower()}"'))
+    if text is None:
+        return notes
+    for number, line in enumerate(text.splitlines(), start=1):
+        for pattern, detail in _SECRET_RULES:
+            if pattern.search(line):
+                notes.append(Note("secret", f"{label}:{number}", detail))
+    return notes
 
 
 def _source_notes(context: Context, manifest: Manifest, desired_files) -> list[Note]:
     notes = []
     for entry in manifest.entries:
-        path = context.source_root / entry.source.as_posix()
-        if _PRIVATE_NAME.search(entry.source.as_posix()):
-            notes.append(Note("secret", entry.source.as_posix(), "filename looks private"))
-        if entry.source.suffix.lower() in {".html", ".md", ".svg"}:
+        text = None
+        if entry.source.suffix.lower() in TEXT_SUFFIXES:
             try:
-                text = path.read_text(encoding="utf-8")
+                text = (context.source_root / entry.source.as_posix()).read_text(encoding="utf-8")
             except (OSError, UnicodeError):
-                continue
-            for number, line in enumerate(text.splitlines(), start=1):
-                for pattern, detail in _SECRET_RULES:
-                    if pattern.search(line):
-                        notes.append(Note("secret", f"{entry.source}:{number}", detail))
-        if entry.source.suffix.lower() == ".html":
-            rendered = desired_files.get(entry.destination)
-            if rendered is None:
-                continue
-            try:
-                text = rendered.decode("utf-8")
-            except UnicodeDecodeError:
-                continue
-            for number, url in render.external_references(text):
-                notes.append(Note("external", f"{entry.source}:{number}", url))
+                text = None
+        notes.extend(source_warnings(entry.source, text))
+        if entry.source.suffix.lower() != ".html":
+            continue
+        rendered = desired_files.get(entry.destination)
+        if rendered is None:
+            continue
+        try:
+            document = rendered.decode("utf-8")
+        except UnicodeDecodeError:
+            continue
+        for number, url in render.external_references(document):
+            notes.append(external_note(f"{entry.source}:{number}", url))
     return notes
 
 

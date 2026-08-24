@@ -1225,9 +1225,19 @@ prediction; see the last global constraint.
 
 ## Deviations from this plan
 
-To be filled during implementation, as M1 and M2 did. Record plan defects, review findings, and any
-correction this implementation forces on
-[design_artefact-sync.md](design_artefact-sync.md) — including corrected test counts.
+Recorded because the plan was written before the code existed, and a plan that hides where it was
+wrong is worth less on the next milestone.
+
+Plan defects found and corrected during implementation:
+
+- Task 3 Step 2 predicted every new test would error because `source_warnings` did not exist. Eight
+  did. The integration test does not call that seam directly, so it reached the existing private-name
+  scan and failed its assertion on the old `filename looks private` wording instead.
+- Task 3 combined the AWS-key and private-key failures in one test method. They are distinct secret
+  shapes, so implementation split them into distinct methods. Task 3 therefore ended at **209**
+  tests, not 208.
+
+No correction to [design_artefact-sync.md](design_artefact-sync.md) was required by Tasks 1-3.
 
 ## Milestones after M3
 
