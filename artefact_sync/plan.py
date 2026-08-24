@@ -241,9 +241,12 @@ def create_sync_plan(context: Context, manifest: Manifest) -> SyncPlan:
             )
 
     notes = _source_notes(context, next_manifest, desired_files)
+    # A destination queued for deletion is managed, not unmanaged. Warning that it is being
+    # "left alone" would print design invariant 4 about the one file this run removes.
     expected = {
         *desired_files,
         *next_manifest.protected_files,
+        *(change.destination for change in changes if change.kind in DELETION_KINDS),
         *(PurePosixPath(name) for name in manifest_module.CONTROL_FILES),
     }
     for destination in sorted(scan_published_tree(context.artefacts_root) - expected, key=str):

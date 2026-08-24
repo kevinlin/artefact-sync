@@ -4,7 +4,7 @@ import tempfile
 import unittest
 from pathlib import Path, PurePosixPath
 
-from artefact_sync import plan as p
+from artefact_sync import cli, manifest as manifest_module, plan as p
 from artefact_sync.config import Context, Site
 from artefact_sync.errors import ValidationError
 from artefact_sync.manifest import Manifest
@@ -82,3 +82,46 @@ class CatalogueConfigTests(unittest.TestCase):
             with self.assertRaises(ValidationError) as caught:
                 p.create_sync_plan(context, current)
         self.assertIn("site.catalogue", str(caught.exception))
+
+
+class OrphanNoteTests(unittest.TestCase):
+    """Design invariant 4 promises orphans are never deleted. Do not print it about a deletion."""
+
+    def _synced_repo(self, tmp: Path, files: dict) -> tuple[Path, Path, Path]:
+        root = Path(tmp)
+        repo = make_repo(root, {"README.md": b"x\n"})
+        source = make_source_tree(root, files)
+        pointer = root / "pointer.json"
+        cli.main(["init", "--pointer", str(pointer),
+                  "--repo", str(repo), "--source", str(source)])
+        cli.main(["plan", "--pointer", str(pointer)])            # proposes, exits 3
+        cli.main(["sync", "--pointer", str(pointer), "--yes"])   # publishes
+        return repo, source, pointer
+
+    def _replan(self, pointer: Path) -> p.SyncPlan:
+        context = cli.resolve_context(cli.parse_args(["plan", "--pointer", str(pointer)]))
+        return p.create_sync_plan(context, manifest_module.load_manifest(context.artefacts_root))
+
+    def test_a_file_this_run_deletes_is_not_also_called_an_orphan(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            _repo, source, pointer = self._synced_repo(tmp, {"keep.png": b"keep"})
+            (source / "keep.png").unlink()
+            sync_plan = self._replan(pointer)
+        deleted = [change.destination.as_posix() for change in sync_plan.changes
+                   if change.kind in p.DELETION_KINDS]
+        self.assertEqual(["keep.png"], deleted)
+        self.assertEqual(
+            [],
+            [note for note in sync_plan.notes
+             if note.kind == "orphan" and "keep.png" in note.where],
+        )
+
+    def test_a_genuinely_unmanaged_file_is_still_warned_about(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo, _source, pointer = self._synced_repo(tmp, {"keep.png": b"keep"})
+            (repo / "artefacts" / "redirect.html").write_bytes(b"<html></html>\n")
+            sync_plan = self._replan(pointer)
+        self.assertEqual(
+            ["artefacts/redirect.html"],
+            [note.where for note in sync_plan.notes if note.kind == "orphan"],
+        )
