@@ -28,13 +28,31 @@ PYTHONPATH="$HOME/.claude/skills/artefact-sync" python3 -m artefact_sync <comman
 
 The two-step proposal flow prevents a newly discovered file from becoming public before its URL and catalogue metadata are reviewed. Propose metadata only for sources absent from the manifest. Never re-title or re-slug an existing entry. A published entry keeps its `id`, `title`, and `destination`; a confirmed source rename takes the new `source` while retaining those fields.
 
+## Warnings
+
+`plan`, `sync` and `add` print warnings next to the change groups. None of them stop a run.
+
+- `secret`: a filename containing `prompt`, `draft`, `internal` or `client`, or a line matching an
+  API-key, AWS-key, GitHub-token or private-key shape. Read the named line before publishing.
+- `external`: a published HTML page loads something off-site at runtime. Vendor it into
+  `artefacts/vendor/` and add a `replacements` entry if the page must keep working offline.
+- `orphan`: a file in `artefacts/` belonging to no manifest entry. Never deleted, never rewritten.
+- `size`: a new public file over 10 MB.
+
+`EXCLUDED` lists what was in the source folder and did not sync: unsupported types by suffix, and
+the `ignored_sources` rules that matched. A file that "did not publish" is almost always there.
+
 ## Commands
 
 - `init`: configure the single repository and source folder, then seed missing control files.
 - `plan`: show new public URLs, changed content, URLs that would start returning 404, warnings, and blocked files. An unseen approved source writes only its proposed manifest entry and exits 3.
 - `sync`: recompute the plan, confirm it, apply atomic per-file writes, delete vanished managed entries, and leave unmanaged files alone. `--yes` is available for unattended verified runs.
 - `validate`: check the manifest, required files, catalogue links, local references, and SVG policy. Unmanaged files are warnings.
-- `add <path>`: reserved for M3. It is not available yet.
+- `add <path>`: stage one file into the source folder and sync that entry. Copies the file in,
+  refusing if a file of that name is already there; skips the copy when the path is already inside
+  the source folder. The named file's proposed entry does not stop the run, since the file was named
+  on purpose. Any other unlisted source still blocks it. Nothing becomes public until `publish`.
+  `--yes` skips the confirmation for unattended runs.
 - `publish`: recompute the plan, confirm it, apply it, validate the tree, commit, push, wait for
   the Pages build, then fetch every published URL including protected files. Publishing is
   irreversible in practice: search engines and readers may cache a URL once it is public, and

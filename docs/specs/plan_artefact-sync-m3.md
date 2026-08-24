@@ -4,6 +4,10 @@
 > (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use
 > checkbox (`- [ ]`) syntax for tracking.
 
+**Status: complete.** All six tasks implemented; 227 tests pass on both `/usr/bin/python3` (3.9.6,
+the floor) and 3.13. Each task landed in its specified commit, with one extra test-driver cleanup
+commit after Task 4.
+
 **Goal:** Ship `add <path>`, fix the two defects the M2 live run exposed, and make `plan`'s output
 tell the whole truth — the excluded and ignored files it currently computes and throws away, and the
 secret warnings it currently emits with no test behind them.
@@ -1242,8 +1246,16 @@ Plan defects found and corrected during implementation:
 - Task 4 combined unsupported files, ignored files and their total in one test, and combined warning
   kind order with within-kind path order in another. Those are distinct failures, so implementation
   gave each its own method. Task 4 added eight methods and ended at **217** tests, not 213.
+- Task 5 Step 2 predicted all eight tests would fail with exit 1 and `add command is not available
+  yet`. Seven errored with `SystemExit: 2` because their `--yes` argument was rejected by the parser
+  before dispatch. The confirmation test reached dispatch and failed because the unavailable-command
+  message was written to stderr while that test captured only stdout.
+- Task 5 added eight methods to the real 217-test baseline and ended at **225** tests, not 221.
+- Task 6 added two methods and ended at **227** tests on both interpreters, not 223.
+- Commit `2b2960e` is an extra driver-cleanup commit beyond the task commit list. It removed the
+  unused `kinds()` helper that Task 3's test snippet carried into `tests/test_secrets.py`.
 
-No correction to [design_artefact-sync.md](design_artefact-sync.md) was required by Tasks 1-4.
+No correction to [design_artefact-sync.md](design_artefact-sync.md) was required by Tasks 1-6.
 
 ## Milestones after M3
 
