@@ -8,10 +8,6 @@ from artefact_sync import cli, plan as p
 from tests.helpers import make_repo, make_source_tree
 
 
-def kinds(notes) -> list:
-    return [(note.kind, note.where, note.detail) for note in notes]
-
-
 class FilenameHeuristicTests(unittest.TestCase):
     """The requirement names the words prompts, draft, internal and client."""
 
