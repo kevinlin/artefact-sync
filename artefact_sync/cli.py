@@ -33,6 +33,7 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
             child.add_argument("--yes", action="store_true")
     add = sub.add_parser("add")
     add.add_argument("path", type=Path)
+    add.add_argument("--yes", action="store_true")
     _add_context_args(add)
     return parser.parse_args(argv)
 
@@ -135,18 +136,64 @@ def command_plan(args: argparse.Namespace) -> int:
     return EXIT_OK
 
 
-def command_sync(args: argparse.Namespace) -> int:
-    context, current = _command_state(args)
-    sync_plan = plan_module.create_sync_plan(context, current)
+def _apply_or_report(
+    args: argparse.Namespace,
+    context: config.Context,
+    sync_plan: plan_module.SyncPlan,
+    verb: str,
+) -> int:
     print(plan_module.format_plan(sync_plan), end="")
     if sync_plan.blocked:
         _write_proposed_manifest(context, sync_plan)
         return EXIT_BLOCKED
     if not args.yes and input("Apply these changes? Type yes to continue: ") != "yes":
-        print("sync cancelled; nothing was applied.")
+        print(f"{verb} cancelled; nothing was applied.")
         return EXIT_ERROR
     apply_module.apply_plan(context, sync_plan)
     return EXIT_OK
+
+
+def command_sync(args: argparse.Namespace) -> int:
+    context, current = _command_state(args)
+    return _apply_or_report(args, context, plan_module.create_sync_plan(context, current), "sync")
+
+
+def _source_relative(context: config.Context, given: Path) -> PurePosixPath:
+    """Where `given` will live, relative to the source root."""
+    resolved = given.resolve()
+    root = context.source_root.resolve()
+    if resolved.is_relative_to(root):
+        return PurePosixPath(resolved.relative_to(root).as_posix())
+    return PurePosixPath(resolved.name)
+
+
+def command_add(args: argparse.Namespace) -> int:
+    context, current = _command_state(args)
+    given = args.path.expanduser()
+    if given.is_symlink() or not given.is_file():
+        raise ConfigError(f"not a regular file: {given}")
+    if given.suffix.lower() not in manifest.APPROVED_EXTENSIONS:
+        raise ConfigError(
+            f"{given.suffix or given.name} is not an approved type; approved: "
+            + " ".join(sorted(manifest.APPROVED_EXTENSIONS))
+        )
+    relative = _source_relative(context, given)
+    if manifest.is_ignored(relative, current.ignored_sources):
+        raise ConfigError(
+            f"{relative.as_posix()} matches an ignored_sources rule and would never sync; "
+            "rename it or edit ignored_sources in the manifest"
+        )
+    target = context.source_root / relative.as_posix()
+    if target.resolve() != given.resolve():
+        if target.exists() or target.is_symlink():
+            raise ConfigError(
+                f"{target} already exists; rename the file, or edit it in place and run sync"
+            )
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(given, target)
+        print(f"copied {relative.as_posix()} into {context.source_root}")
+    sync_plan = plan_module.create_sync_plan(context, current, accepted=(relative,))
+    return _apply_or_report(args, context, sync_plan, "add")
 
 
 def command_validate(args: argparse.Namespace) -> int:
@@ -178,6 +225,7 @@ def _dispatch(args: argparse.Namespace) -> int:
     if args.command == "init":
         return command_init(args)
     commands = {
+        "add": command_add,
         "plan": command_plan,
         "sync": command_sync,
         "publish": command_publish,

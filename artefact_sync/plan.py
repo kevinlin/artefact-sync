@@ -157,7 +157,9 @@ def _source_notes(context: Context, manifest: Manifest, desired_files) -> list[N
     return notes
 
 
-def create_sync_plan(context: Context, manifest: Manifest) -> SyncPlan:
+def create_sync_plan(
+    context: Context, manifest: Manifest, accepted: tuple[PurePosixPath, ...] = ()
+) -> SyncPlan:
     declared = manifest_module.normalize_orders(manifest)
     inventory, ignore_counts = scan.apply_source_ignores(
         scan.scan_source(context.source_root, context.repo_root), declared.ignored_sources
@@ -183,10 +185,12 @@ def create_sync_plan(context: Context, manifest: Manifest) -> SyncPlan:
         next_manifest, manifest_module.head_manifest(context.repo_root)
     )
 
+    # `accepted` holds sources the user named on the command line, so their proposal is not a
+    # decision the run has to stop for. Every other unlisted source still blocks.
     blocked = [
         Blocked(source.as_posix(), "approved source has no manifest entry; proposal generated")
         for source in unlisted
-        if source not in renames
+        if source not in renames and source not in accepted
     ]
     for entry in next_manifest.entries:
         if entry.source.suffix.lower() != ".svg":
