@@ -70,6 +70,7 @@ Nine files on disk, seven approved by suffix, one of those ignored, six publishe
 | 23 | Add a `dirty.svg` carrying a `<script>` element, then `plan` | `BLOCKED` naming the file and line, exit 3, nothing published | Pass on the gate, with a correction to the expectation. `dirty.svg:2   script element ('<script')`, exit 3, and no published file written. The plan's step said "nothing written"; a blocked run does write the proposed `manifest.json`, which is `plan`'s documented behaviour and what makes the two-step flow work. Reverted with `git checkout` after removing the file |
 | 24 | Delete `brief.pdf` from the source folder, then `publish` | Confirmation says exactly one URL will start 404-ing; afterwards it 404s and the others serve | Pass. `WILL START 404-ING (1)` naming `brief.pdf` and nothing else; `published 4550825341ba on main`, `verified 11 published URLs`. Afterwards `brief.pdf` returns 404, `flow.svg`, the 2 MB PNG and `showcase/index.html` all return 200, and the catalogue dropped the link. **No orphan warning named the file being deleted** — that is M3's fix holding on a live run, and it is the defect M2 row 10 found |
 | 25 | `publish` again with nothing changed | `nothing to publish`, every URL re-verified, no commit | Pass. `nothing to publish; 11 published URLs verified.`, no new commit |
+| 26 | Open the catalogue, a Markdown page and a hand-built HTML page in a real browser | They render, and the console is quiet | Pass, confirmed by the operator. This is the half of row 18 no fetch can settle: that `marked.js` actually parses the embedded block and paints the page |
 
 ## What the run found
 
@@ -142,6 +143,6 @@ built, a 2 MB image compared byte for byte after a round trip through push and P
 from a real deletion with no orphan warning misnaming it, and the `.svg` and `.pdf` paths the prior
 art has no counterpart for — including an SVG rejected by line number rather than rewritten.
 
-One check is outstanding and is a human's to make: opening the catalogue, a Markdown page and a
-hand-built HTML page in a real browser to confirm they render and the console is quiet. Everything
-machine-checkable about those pages passed in row 18.
+Row 26 closes the last gap. Fetching a page proves the bytes; only a browser proves `marked.js`
+parses the embedded block and paints it, which is exactly what the `$prefix$vendor` and
+`markdown-source` fixes exist for. The operator confirmed it.
