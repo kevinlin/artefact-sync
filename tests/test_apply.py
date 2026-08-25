@@ -49,7 +49,8 @@ class RoundTripVerificationTests(unittest.TestCase):
         self.assertIsNone(a.verify_markdown_round_trip(b"# x\r\n", rendered, "a.md"))
 
     def test_raises_when_the_page_carries_different_markdown(self) -> None:
-        rendered = b'<script type="text/markdown" id="artefact-source"># DIFFERENT\n</script>'
+        rendered = (b'<script type="text/markdown" id="markdown-source">\n'
+                    b"# DIFFERENT\n</script>")
         with self.assertRaises(ValidationError):
             a.verify_markdown_round_trip(b"# x\n", rendered, "a.md")
 

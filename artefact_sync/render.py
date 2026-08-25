@@ -10,7 +10,7 @@ from .config import Context, Site
 from .errors import TransformationError
 from .manifest import TEMPLATE_NAME, VENDOR_NAME, Entry, Manifest, resolve_within
 
-BLOCK_START = '<script type="text/markdown" id="artefact-source">'
+BLOCK_START = '<script type="text/markdown" id="markdown-source">\n'
 BLOCK_END = "</script>"
 MARKDOWN_MARKER = re.compile(r"<(\\*)(/script|!--)", re.IGNORECASE)
 EXISTING_ICON_LINK = re.compile(r"""<link\b[^>]*\brel=["']?[^"'>]*\bicon\b""", re.I)

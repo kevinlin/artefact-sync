@@ -169,7 +169,10 @@ $block_start$markdown$block_end
     <script src="$prefix$vendor"></script>
     <script>
         (function () {
-            var raw = document.getElementById('artefact-source').textContent;
+            // textContent starts at the newline that follows the opening tag, which
+            // the Python-side extract_markdown slice does not include. Drop it so
+            // both sides see the same bytes.
+            var raw = document.getElementById('markdown-source').textContent.replace(/^\n/, '');
             var text = raw.replace(/<(\\+)(\/script|!--)/gi, function (match, slashes, marker) {
                 return '<' + slashes.slice(1) + marker;
             });

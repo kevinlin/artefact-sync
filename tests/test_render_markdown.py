@@ -111,13 +111,23 @@ class TemplateTests(unittest.TestCase):
         ).decode("utf-8")
         self.assertTrue(page.startswith("../../|vendor/marked.min.js|"), page[:60])
 
-    def test_the_renderer_reads_the_embedded_source_block_id(self) -> None:
+    def test_the_page_and_its_reader_agree_on_the_block_id(self) -> None:
         page = render.render_markdown_page(
             ENTRY, b"# x\n", PurePosixPath("vendor/marked.min.js"), SITE, TEMPLATE
         ).decode("utf-8")
-        self.assertIn('id="artefact-source"', page)
-        self.assertIn("getElementById('artefact-source')", page)
+        self.assertIn('id="markdown-source"', page)
+        self.assertIn("getElementById('markdown-source')", page)
+        self.assertNotIn("artefact-source", page)
 
-    def test_the_browser_does_not_strip_a_leading_source_newline(self) -> None:
+    def test_the_source_starts_on_the_line_after_the_opening_tag(self) -> None:
+        # The prior art published every page this way, so changing it would rewrite
+        # every Markdown page an adopter has. See M4-c.
+        page = render.render_markdown_page(
+            ENTRY, b"# x\n", PurePosixPath("vendor/marked.min.js"), SITE, TEMPLATE
+        ).decode("utf-8")
+        self.assertIn('<script type="text/markdown" id="markdown-source">\n# x\n</script>', page)
+
+    def test_the_browser_strips_the_leading_source_newline(self) -> None:
+        # textContent begins at that newline; extract_markdown's slice does not.
         raw = Path("artefact_sync/assets/page-template.html").read_text(encoding="utf-8")
-        self.assertNotIn(r".replace(/^\n/, '')", raw)
+        self.assertIn(r".replace(/^\n/, '')", raw)
