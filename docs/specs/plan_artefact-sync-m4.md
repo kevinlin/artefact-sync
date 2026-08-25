@@ -4,26 +4,29 @@
 > (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use
 > checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Close the release gate. Migrate `kevinlin.github.io` off `scripts/artefacts.py` and onto
-the skill, and require that every one of its 56 published URLs keeps serving the same bytes.
+**Goal:** Close the release gate on a disposable probe pair — the real source folder
+`~/Downloads/Claude-Artefacts` publishing to `https://kevinlin.github.io/artefacts-test/artefacts/` —
+by proving the skill reproduces, byte for byte, a published tree the prior art generated from that
+same folder. `kevinlin.github.io` is not migrated and not modified.
 
-**Architecture:** No new modules. M4 is four small corrections inside `render.py`, `catalogue.py`,
-`config.py` and `manifest.py`, all four found by running the skill against the live tree before
-writing this plan. Then a dry run against a throwaway clone, then the live cutover. The four
-corrections are measured, not guessed: with them applied to a scratch copy, all 56 published entry
-blobs and `artefacts/index.html` come out byte-identical, and the only file that changes is
-`artefacts/manifest.json`.
+**Architecture:** No new modules. M4 is four small corrections inside `render.py`, `catalogue.py`
+and `manifest.py`, then a fixture and a gate. The fixture is the load-bearing idea: a throwaway
+repository whose `artefacts/` tree is published by `scripts/artefacts.py` — run from a copy, against
+`--repo`/`--source` pointing at the probe — and committed. The skill then adopts that tree. Zero
+rewrites is the gate. All four corrections are measured, not guessed: with them applied to a scratch
+copy, all 6 probe entries and the injected catalogue come out identical to the prior art's committed
+bytes, and a commit would carry only `artefacts/manifest.json` and `artefacts/page-template.html`.
 
-**Tech Stack:** Python 3.9, standard library only, `unittest`. Tasks 1-5 run offline. Tasks 6-8 touch
-a real repository and the network.
+**Tech Stack:** Python 3.9, standard library only, `unittest`. Tasks 1-7 run offline. Task 8 touches
+GitHub and the network.
 
-**Spec:** [design_artefact-sync.md](design_artefact-sync.md), release ladder line "M4: release gate,
-migrating `kevinlin.github.io`", and the "Release ladder" section's M4 paragraph. Supporting evidence
-with `file:line` citations into the prior art is
-[extraction-analysis.md](../research/extraction-analysis.md). The three earlier milestones and the
-deviations this plan inherits are [plan_artefact-sync-m1.md](plan_artefact-sync-m1.md),
+**Spec:** [design_artefact-sync.md](design_artefact-sync.md), release ladder line "M4: release gate",
+and the "Release ladder" section's M4 paragraph. Supporting evidence with `file:line` citations into
+the prior art is [extraction-analysis.md](../research/extraction-analysis.md). The three earlier
+milestones and the deviations this plan inherits are
+[plan_artefact-sync-m1.md](plan_artefact-sync-m1.md),
 [plan_artefact-sync-m2.md](plan_artefact-sync-m2.md),
-[plan_artefact-sync-m3.md](plan_artefact-sync-m3.md), and the live evidence from M2 is
+[plan_artefact-sync-m3.md](plan_artefact-sync-m3.md), and M2's live evidence is
 [m2-acceptance.md](m2-acceptance.md).
 
 ## Global Constraints
@@ -33,8 +36,8 @@ Every task's requirements implicitly include this section. The first ten carry o
 - **Python 3.9.** The tool must run under stock macOS `/usr/bin/python3` (3.9.6). Every module
   starts with `from __future__ import annotations` so `X | None` annotations parse on 3.9.
 - **Standard library only.** No third-party import in the shipped package or in its tests, ever.
-  `tests/test_stdlib_only.py` already allows every module M4 needs (`re`, `string`, `json`,
-  `dataclasses`); do not widen `ALLOWED`.
+  `tests/test_stdlib_only.py` already allows every module M4 needs (`re`, `string`, `json`);
+  do not widen `ALLOWED`.
 - **Test command:** `python3 -m unittest discover -s tests -t . -v`. Never pytest. Run it under
   **both** `python3` (3.13) and `/usr/bin/python3` (3.9.6) before every commit.
 - **The M3 baseline is 227 tests, all passing on both interpreters.** No task may leave that number
@@ -44,86 +47,121 @@ Every task's requirements implicitly include this section. The first ten carry o
   for `format_plan`; keep it passing.
 - **The shipped assets carry no branding.** `tests/test_render_markdown.py`
   ::`test_the_shipped_template_carries_no_branding` forbids `kevin`, `kevinlin` and `github.io` in
-  `artefact_sync/assets/page-template.html`. M4 copies the site's template into the *site's*
+  `artefact_sync/assets/page-template.html`. M4 converts the prior art's template into the *probe*
   repository, never into `assets/`. Keep that test passing.
 - **Exit codes:** `0` success, `1` error, `3` blocked and needs a human decision.
-- **No network in the unit suite.** Tasks 1-5 add no networked code path.
-- **Never write to `/Users/keli/dev/github-kevinlin/kevinlin.github.io` before Task 8.** Tasks 1-6
-  read it and write only to a clone. `git -C /Users/keli/dev/github-kevinlin/kevinlin.github.io
-  status --short` must print nothing at the end of every task up to and including Task 6.
+- **No network in the unit suite.** Tasks 1-7 add no networked code path.
+- **`/Users/keli/dev/github-kevinlin/kevinlin.github.io` is read-only for the whole milestone.** Not
+  migrated, not edited, no branch, no commit. The only interaction is copying `scripts/artefacts.py`
+  out of it once, in Task 6, and running that copy from elsewhere with `python3 -B` so no bytecode is
+  written back. Every task ends with `git -C /Users/keli/dev/github-kevinlin/kevinlin.github.io
+  status --short` printing nothing.
+- **`~/Downloads/Claude-Artefacts` is the gate's source folder, and it is real.** Tasks 6 and 7 only
+  read it. Task 8 adds two files to it and deletes one temporary file, all named in its steps and
+  all removable afterwards. Nothing else in it is created, edited or deleted.
+- **`git status` is not the gate; `git diff HEAD` is.** With `core.autocrlf = input` — set in
+  `~/.gitconfig` on this machine — `git status` reports a file whose working-tree line endings
+  changed, even when the content diff against HEAD is empty. Use
+  `git diff --name-only HEAD -- artefacts` and `git diff --cached --name-status` for every assertion
+  about what moved.
 - **Every test count in this plan is a prediction.** M2 and M3 both recorded cases where a stated
   count was satisfied by contorting the code instead of correcting the number. If your count
   differs, the number here is wrong: fix it in "Deviations from this plan". Never merge two distinct
   failures into one `subTest` loop, and never build a test name by string concatenation, to hit a
   figure written before the code existed.
-- **The measurements in this plan were taken against the tree as of live-repo HEAD `280b17e`.** If
-  the live repository or `~/Downloads/Artefacts` has moved on, re-measure with the commands in
-  Task 6 Step 1 before trusting a count.
 
 ---
 
 ## What M4 actually is
 
 The design's ladder line reads "M4: release gate, migrating `kevinlin.github.io`", and the "Release
-ladder" section spells out the procedure: copy the template verbatim, seed `date` from mtimes,
-install the skill, run `plan`, require zero changes. Running that procedure before writing this plan
-found four defects. All four are in the skill, none in the site, and each one silently rewrites live
-content.
+ladder" section spells out the procedure: publish with the prior art, install the skill, run `plan`,
+require zero changes. That procedure was run against the live tree, read-only, before this plan was
+written. It found four defects, all in the skill, each of which silently rewrites published content.
 
-| # | What breaks | Blast radius on the live tree | Task |
+| # | What breaks | Effect | Task |
 |---|---|---|---|
-| 1 | `render_markdown_page` bakes the `../` climb into `$vendor`, and the design's template also uses `$prefix`, so a template using both — as the site's does — doubles the climb | All 9 Markdown pages get a broken `<script src>`; `validate` catches it as `broken local reference` | 1 |
-| 2 | Neither `render_markdown_page` nor `transform_html` normalises line endings, and `core.autocrlf=input` strips CR on commit, so the tree `apply` writes is not the tree git stores | 1 page today (`agent-harness/20260713-loop-engineering-raw/index.html`, 16 CRs), and any future CRLF source. A fresh clone never converges: `plan` reports the same entry CHANGED forever | 1 |
-| 3 | The embedded block is `id="artefact-source"` with no leading newline; every published page carries `id="markdown-source"` and a newline | All 9 Markdown pages rewritten for no reason. `extract_markdown` also cannot read any page published by the prior art, so `plan` prints `diff unavailable: page has no embedded Markdown` instead of a diff | 2 |
-| 4 | `catalogue.render_catalogue` emits its own markup and sorts entries by date; the live `index.html` CSS targets `card-grid`, `card` and `card-updated`, sorts *cards* by date and *entries* by `order`, and hangs the 3D showcase link off one section heading | The whole 221-line catalogue replaced with unstyled markup; card order changes in 2 of 2 sections, entry order in 4 of 21 cards; the showcase link disappears and the 3D gallery becomes unreachable | 3 |
+| 1 | `render_markdown_page` bakes the `../` climb into `$vendor`, and the design's template also uses `$prefix`, so a template using both — as the prior art's does — doubles the climb | Every Markdown page gets a broken `<script src>`; `validate` catches it as `broken local reference` | 1 |
+| 2 | Neither `render_markdown_page` nor `transform_html` normalises line endings, and `core.autocrlf=input` strips CR on commit, so the tree `apply` writes is not the tree git stores | Any CRLF source. A fresh clone never converges: `plan` reports the same entry CHANGED forever | 1 |
+| 3 | The embedded block is `id="artefact-source"` with no leading newline; every page the prior art published carries `id="markdown-source"` and a newline | Every Markdown page rewritten for no reason. `extract_markdown` also cannot read a page the prior art published, so `plan` prints `diff unavailable: page has no embedded Markdown` instead of a diff | 2 |
+| 4 | `catalogue.render_catalogue` emits its own markup and sorts entries by date; the prior art's host page CSS targets `card-grid`, `card` and `card-updated`, and sorts *cards* by date and *entries* by `order` | The whole catalogue replaced with unstyled markup, card and entry order shuffled | 3 |
 
-Plus one migration blocker that is nobody's defect but stops the first run dead:
+Plus one adoption blocker that is nobody's defect but stops the first run dead:
 
 | # | What breaks | Task |
 |---|---|---|
 | 5 | `manifest.head_manifest` parses `git show HEAD:artefacts/manifest.json` through the full strict schema, so in any repository whose committed manifest predates the `site` block the first command exits with `missing manifest field: site` — naming a field the user has already set in the working copy | 4 |
 
-### The live tree, measured
+### Why a probe, and what that costs
 
-Numbers this plan relies on. Every one came from a read-only run; the commands are in Task 6 Step 1.
+The design names `kevinlin.github.io` as the gate. This plan uses a disposable pair instead, because
+the gate's value is the comparison, not the corpus: what proves the extraction is *the prior art
+published this tree, and the skill reproduces it exactly*. A probe seeded by `scripts/artefacts.py`
+makes that comparison on a repository nobody has shared a URL from.
 
-| Fact | Value |
+The source folder is real, not generated. `~/Downloads/Claude-Artefacts` is a staging folder of
+Claude-produced artefacts, with the same shapes the live corpus has: nested collection directories,
+root-level pages, a `prompts/` working directory, `.DS_Store` litter, and two large hand-built HTML
+pages full of the escaping that breaks naive round trips. Its content is what it is, which is the
+point and also the limit.
+
+**What the corpus covers.** 9 files, 7 approved by suffix, 6 published entries in 2 collections.
+Markdown pages through the embed-and-extract round trip; two 30-40 KB HTML pages carrying literal
+`</script>`, em dashes, entities and off-site references; a 2 MB PNG as a byte copy; a `prompts/`
+directory matched by an ignore rule; `.DS_Store` dropped by the walk; and directory-index
+destinations at two depths, which is what makes the `$prefix` defect visible.
+
+**What it does not cover, and where those stay covered.** Measured, not assumed:
+
+| Not in the corpus | Covered instead by |
 |---|---|
-| Manifest entries | **56** (the requirement and design both say 57) |
-| Collections | 31, of which 21 have entries and render |
-| `protected_files` | 36 |
-| Files under `artefacts/` | 96 = 56 entries + 36 protected + `index.html` + `manifest.json`, plus 2 untracked `.DS_Store` |
-| Source files under `~/Downloads/Artefacts` | 234 |
-| Approved by suffix | 128 |
-| Left after `ignored_sources` | 66 |
-| Approved but unlisted | **10**, all under `.firecrawl/` |
-| Entry source suffixes | 26 `.png`, 14 `.html`, 9 `.md`, 5 `.jpeg`, 2 `.jpg` |
-| Doubled-brace pairs in the prior art's `MARKDOWN_PAGE_TEMPLATE` | **36** (the design says 55) |
-| `$` characters in that template | 0, so the `string.Template` conversion needs no `$$` escaping |
+| A CRLF text source | Task 1's unit tests, and Task 5's `test_m4_adoption.py`, which drives a CRLF source through a real git repository under this machine's real `core.autocrlf` |
+| A file with no final newline | Task 1's unit tests, and the existing `test_a_source_without_a_final_newline_gains_one` |
+| An unsupported suffix, so `EXCLUDED` shows only the ignored outcome | `tests/test_scan.py`, and M2's live run, which reported `.psd` and friends |
+| A dotfile directory, so the `.*` seed rule is unnecessary here | `tests/test_scan.py::test_dotfiles`, and the live measurement in Task 6 Step 1 |
+| A secret-shape line or a private-looking filename | `tests/test_secrets.py`, 8 cases |
+| `replacements` | Unit tests only. No live entry uses it either |
+| An `Image collections` section, so the prior art emits no showcase link | Nothing, deliberately. See M4-j |
 
-The 10 unlisted files are the whole reason a first run blocks: `scan_source` in the prior art skips
-any directory whose name starts with `.` (`artefacts.py:463`), the skill does not, and the live
-`ignored_sources` predates the `.*` seed that `cli.SEED_IGNORES` now carries. One added rule fixes
-it.
+Scale is the other gap: 6 entries against the live site's 56. A rendering path that appears once in
+fifty real files could hide. The live measurements the corpus was checked against are in Task 6
+Step 1, and re-running the read-only comparison there is how you check whether that matters.
+
+### The probe pair
+
+| | |
+|---|---|
+| Source folder | `~/Downloads/Claude-Artefacts`, read as it stands |
+| Repository | `kevinlin/artefacts-test`, public, Pages from `main` / `/ (root)` |
+| Published artefacts | `https://kevinlin.github.io/artefacts-test/artefacts/` |
+| Entries | 6, in 2 collections, in 1 section |
+| Protected files | `vendor/marked.min.js`, `showcase/index.html` |
+| URLs `publish` verifies | 10 — the base URL, `index.html`, 6 entries, 2 protected files |
+
+The repository root URL the pair is named for, `https://kevinlin.github.io/artefacts-test/`, serves
+the repository's own root; the skill publishes one level down under `artefacts/`, exactly as it does
+for any project-page repository. M2's probe had the same shape.
 
 ---
 
 ## Corrections to the design this plan applies
 
-Each was found by running the skill against the live tree. Apply each to
+Each was found by running the skill against a real published tree. Apply each to
 [design_artefact-sync.md](design_artefact-sync.md) as M1, M2 and M3 did.
 
 | # | What the design or the code says | What M4 does | Why |
 |---|---|---|---|
-| M4-a | Template placeholders are `$title, $favicon, $prefix, $vendor, ...` | `$vendor` is the vendor path alone; `$prefix` is the `../` climb; the shipped template composes `src="$prefix$vendor"` | `render_markdown_page` passes `vendor=prefix + vendor_path`, and the shipped template uses `$vendor` on its own, so the two placeholders cannot both be used as documented. The site's template uses both and gets `../../../../vendor/marked.min.js` |
+| M4-a | Template placeholders are `$title, $favicon, $prefix, $vendor, ...` | `$vendor` is the vendor path alone; `$prefix` is the `../` climb; the shipped template composes `src="$prefix$vendor"` | `render_markdown_page` passes `vendor=prefix + vendor_path`, and the shipped template uses `$vendor` on its own, so the two placeholders cannot both be used as documented. A template using both, as the prior art's does, produces `../../../../vendor/marked.min.js` |
 | M4-b | E5: the invariant is "text-exact after UTF-8 decode and trailing-newline normalisation" | Text-exact after UTF-8 decode, **line-ending normalisation**, and trailing-newline normalisation | Git with `core.autocrlf=input` — the setting on this machine, and a common default — stores LF for a CRLF working-tree file. Without normalisation the bytes `apply` writes are not the bytes that get published, and a fresh clone reports the same entry CHANGED on every run, forever. Normalising CRLF to LF is safe for Markdown: a hard line break is trailing spaces or a backslash, never a CR |
-| M4-c | The Markdown block is `<script type="text/markdown" id="artefact-source">` | `<script type="text/markdown" id="markdown-source">` followed by a newline | The prior art published 9 pages with `markdown-source` and a leading newline (`artefacts.py:525-526`). Keeping the skill's spelling rewrites all 9 for no gain, and `extract_markdown` cannot read a page the prior art published, so the diff preview and `apply`'s round-trip check both go blind on exactly the pages a migration needs to check |
-| M4-d | "`date` lets the catalogue sort by recency instead of hand-maintained `order`" | Collection **cards** sort by their newest entry date, descending, stable on `order`. **Entries** inside a card keep sorting by `order` | The prior art sorts cards by recency and entries by `order` (`artefacts.py:1360-1383`). Sorting entries by date too reorders 4 of the 21 live cards, and it is the wrong reading anyway: a card's date answers "is this collection fresh", while an entry's position inside a card is editorial |
-| M4-e | "Customising the standalone catalogue means adding markers to it and switching to inject mode, so there is no second template" | True for the shell, false for the fragment. `render_catalogue` adopts the prior art's markup, and `site.catalogue.section_links` maps a section title to raw HTML appended inside its `<h2>` | The fragment's class names are what the host page's CSS targets, so a host page cannot adopt a foreign fragment without a rewrite. The site's 3D showcase link lives inside one section heading and is regenerated on every sync, so without a hook the migration deletes the only route to the 3D gallery. One optional map, read in one line, and the raw HTML is the user's own manifest — the same trust level as `favicon` and `replacements` |
-| M4-f | `head_manifest` returns "the manifest as of HEAD, or None when it was never committed" | Also `None` when HEAD's manifest cannot be parsed, after one attempt with a placeholder `site` injected | A repository adopting the skill has a committed manifest with no `site` block, and the invariant check reads only `id`, `destination` and `title` from it. Failing the whole run on a field the check never touches makes adoption impossible; returning `None` immediately would throw away the URL-freeze guard on precisely the run where 56 live destinations are at stake. Injecting a placeholder keeps the guard and lets the run proceed |
+| M4-c | The Markdown block is `<script type="text/markdown" id="artefact-source">` | `<script type="text/markdown" id="markdown-source">` followed by a newline | That is what the prior art published (`artefacts.py:525-526`). Keeping the skill's spelling rewrites every Markdown page an adopter has, and `extract_markdown` cannot read any of them, so the diff preview and `apply`'s round-trip check both go blind on exactly the pages an adoption needs to check |
+| M4-d | "`date` lets the catalogue sort by recency instead of hand-maintained `order`" | Collection **cards** sort by their newest entry date, descending, stable on `order`. **Entries** inside a card keep sorting by `order` | The prior art sorts cards by recency and entries by `order` (`artefacts.py:1360-1383`). Sorting entries by date too reorders any curated collection, and it is the wrong reading anyway: a card's date answers "is this collection fresh", while an entry's position inside a card is editorial |
+| M4-e | "Customising the standalone catalogue means adding markers to it and switching to inject mode, so there is no second template" | True for the shell, false for the fragment. `render_catalogue` adopts the prior art's markup | The fragment's class names are what the host page's CSS targets, so a host page cannot adopt a foreign fragment without a rewrite. Making the tool's markup the prior art's is what lets any existing inject-mode page keep its stylesheet |
+| M4-f | `head_manifest` returns "the manifest as of HEAD, or None when it was never committed" | Also `None` when HEAD's manifest cannot be parsed, after one attempt with a placeholder `site` injected | A repository adopting the skill has a committed manifest with no `site` block, and the invariant check reads only `id`, `destination` and `title` from it. Failing the whole run on a field the check never touches makes adoption impossible; returning `None` immediately would throw away the URL-freeze guard on precisely the run where published destinations are at stake. Injecting a placeholder keeps the guard |
 | M4-g | `HOMEPAGE_FILES` is part of the site-coupling surface still to port | Not ported | It backs a `git diff --exit-code base...HEAD -- index.html styles.css script.js` check. `publish`'s preflight already refuses any change outside `artefacts/`, which is strictly stronger and needs no base ref |
-| M4-h | Migration rehomes the atlas as "a git hook, or a step in its own workflow" | A documented manual step in the site's `CLAUDE.md`, `AGENTS.md` and `README.md` | `build_showcase_atlas.py` shells out to `ffmpeg`, so a CI staleness check compares JPEG bytes from two different encoder builds and fails on every run. A git hook is not versioned and does not survive a clone. The migration itself changes zero published images, so nothing is stale on day one; only a future image add needs the step |
-| M4-i | "57 real entries" (requirement and design) | 56 | Counted. `manifest.json` carries 56 entries |
+| M4-h | M4 is "the release gate, migrating `kevinlin.github.io`", and the migration "has to rehome the atlas" | The gate runs against a disposable probe pair. `kevinlin.github.io` is untouched, so its `scripts/artefacts.py`, its `validate-artefacts.yml` and its atlas hook all stay exactly as they are | Deferred by the milestone's owner. The extraction proof does not need the live site's URLs at risk, and the fixes this milestone lands are most of what makes the live migration a no-op whenever it is taken. D1 still stands as the eventual destination; it is no longer this milestone's gate |
+| M4-i | `ignored_sources` matching "is currently exact-string or literal `dir/` prefix", widened by E3 to `fnmatch` | Recorded as a migration hazard, with a test. A bare `name/` rule matches that directory **at any depth** in the skill; in the prior art it matches only at the root | Found by the probe corpus: `prompts/` ignores `mingpt-vs-toy-transformer/prompts/infographic.md` under the skill and nothing under the prior art. The skill's behaviour is deliberate (`manifest.is_ignored` checks `directory in source.parts[:-1]`) and better, but a manifest carried over from the prior art can start ignoring files it used to publish, and those show up as deletions. The live manifest happens to be safe because all three of its `prompts/` rules carry full prefixes |
+| M4-j | (not addressed) | `site.catalogue.section_links` is **not** built | The prior art injects a 3D showcase link into the `Image collections` heading unconditionally, and regenerating that heading would delete it. The probe corpus produces one section and no such link, so nothing in this milestone needs the hook. It is the live migration's requirement, recorded with its measurement in "After M4", and building it now would ship an unexercised feature into a milestone whose scope was deliberately narrowed |
+| M4-k | "57 real entries" (requirement and design) | 56, and not this milestone's corpus | Counted in the live manifest. Recorded so the number stops propagating |
 
 ---
 
@@ -131,13 +169,11 @@ Each was found by running the skill against the live tree. Apply each to
 
 ```
 artefact-sync/
-  SKILL.md                          + section_links in the manifest shape,
-                                    + "Adopting an existing artefacts tree"
+  SKILL.md                          + "Adopting an existing artefacts tree"
   artefact_sync/
     render.py                       + normalise_source_text, BLOCK_START, vendor placeholder
     apply.py                        verify_markdown_round_trip uses normalise_source_text
-    catalogue.py                    prior-art markup, section_slug, card ordering, section_links
-    config.py                       Site.section_links, site_from_dict, site_to_dict
+    catalogue.py                    prior-art markup, section_slug, card ordering
     manifest.py                     head_manifest tolerates a pre-site HEAD manifest
     assets/page-template.html       src="$prefix$vendor", markdown-source, leading-newline strip
     assets/catalogue-template.html  CSS renamed to .card-grid / .card / .card-updated
@@ -145,15 +181,18 @@ artefact-sync/
     test_render_markdown.py         + CRLF cases, block-id cases rewritten
     test_render_html.py             + CRLF case
     test_apply.py                   + CRLF round trip, block-id literal updated
-    test_catalogue.py               SortTests rewritten as CardOrderTests, + markup, + section_links
-    test_config.py                  + section_links round trip
+    test_catalogue.py               SortTests replaced by MarkupTests / CardOrderTests /
+                                    EntryOrderTests
+    test_scan.py                    + a bare directory rule matches at any depth
     test_manifest_invariants.py     + a HEAD manifest with no site block
     test_m4_adoption.py    NEW      adopting a tree that already has published files
   docs/specs/
-    m4-acceptance.md       NEW      the dry run and the live cutover, recorded
+    m4-acceptance.md       NEW      the fidelity gate and the live probe publish, recorded
     plan_artefact-sync-m4.md        this file: status line and deviations, at the end
-    design_artefact-sync.md         corrections M4-a to M4-i
+    design_artefact-sync.md         corrections M4-a to M4-k
 ```
+
+`config.py` is untouched: M4-j drops the only change it would have taken.
 
 Dependency direction is unchanged. No module gains an import.
 
@@ -177,7 +216,7 @@ Dependency direction is unchanged. No module gains an import.
   rewrites `\r\n` and lone `\r` to `\n`, and appends a final `\n` to non-empty text. Raises
   `TransformationError` naming `label` on invalid UTF-8. Called by `render_markdown_page`,
   `render.transform_html` and `apply.verify_markdown_round_trip`. After this task
-  `render_markdown_page` substitutes `vendor=vendor_path.as_posix()` and any template must write
+  `render_markdown_page` substitutes `vendor=vendor_path.as_posix()`, so any template must write
   `$prefix$vendor` to get a working relative URL.
 
 - [ ] **Step 1: Write the failing tests**
@@ -223,7 +262,7 @@ template are two different claims:
         self.assertIn('<script src="../../vendor/marked.min.js"></script>', page)
 
     def test_prefix_and_vendor_are_separate_placeholders(self) -> None:
-        # A template using both, as the design documents and the migrated site does.
+        # A template using both, as the design documents and the prior art's does.
         template = string.Template("$prefix|$vendor|$block_start$markdown$block_end")
         page = render.render_markdown_page(
             ENTRY, b"# x\n", PurePosixPath("vendor/marked.min.js"), SITE, template
@@ -258,10 +297,11 @@ Add to `tests/test_apply.py`, inside `class RoundTripVerificationTests`:
 Run: `python3 -m unittest tests.test_render_markdown tests.test_render_html tests.test_apply -v`
 
 Expected: `test_crlf_line_endings_normalise_to_lf` fails in both render modules (CR survives),
-`test_a_lone_carriage_return_normalises_to_lf` fails, `test_prefix_and_vendor_are_separate_placeholders`
-fails (`../../|../../vendor/...`), and `test_a_crlf_source_still_verifies_against_the_lf_page` passes
-already because nothing normalises yet on either side. `test_the_shipped_template_climbs_to_the_vendor_file`
-passes for the wrong reason and will keep passing.
+`test_a_lone_carriage_return_normalises_to_lf` fails, and
+`test_prefix_and_vendor_are_separate_placeholders` fails with `../../|../../vendor/...`.
+`test_a_crlf_source_still_verifies_against_the_lf_page` passes already, because nothing normalises
+yet on either side of the comparison. `test_the_shipped_template_climbs_to_the_vendor_file` passes
+for the wrong reason and will keep passing.
 
 - [ ] **Step 3: Add `normalise_source_text` and route the three callers through it**
 
@@ -315,12 +355,17 @@ In `transform_html`, replace the decode block and drop the now-dead tail:
     return text.encode("utf-8")
 ```
 
-In `artefact_sync/apply.py`, replace the head of `verify_markdown_round_trip`:
+Moving the final newline ahead of the replacements is safe: `TRAILING_SPACE` matches at end of
+string as well as before a line end, and `ensure_favicon` only touches the head of the document.
+
+In `artefact_sync/apply.py`, extend the existing module-level import and drop the manual decode:
+
+```python
+from .render import extract_markdown, normalise_source_text
+```
 
 ```python
 def verify_markdown_round_trip(source_bytes: bytes, rendered: bytes, label: str) -> None:
-    from .render import normalise_source_text
-
     try:
         expected = normalise_source_text(source_bytes, label)
         document = rendered.decode("utf-8")
@@ -329,16 +374,9 @@ def verify_markdown_round_trip(source_bytes: bytes, rendered: bytes, label: str)
     found = extract_markdown(document)
 ```
 
-`apply.py` already imports `extract_markdown` from `.render` at module level; move
-`normalise_source_text` onto that import line rather than importing inside the function:
-
-```python
-from .render import extract_markdown, normalise_source_text
-```
-
-and drop the local import. `TransformationError` from `normalise_source_text` is not a
-`ValidationError`, so let it propagate: a source that stopped being UTF-8 between plan and apply is
-a transformation failure, and the message already names the file.
+`TransformationError` from `normalise_source_text` is not a `ValidationError`, so let it propagate: a
+source that stopped being UTF-8 between plan and apply is a transformation failure, and its message
+already names the file.
 
 In `artefact_sync/assets/page-template.html`, change the vendor line:
 
@@ -358,7 +396,7 @@ python3 -m unittest discover -s tests -t . 2>&1 | tail -3
 /usr/bin/python3 -m unittest discover -s tests -t . 2>&1 | tail -3
 ```
 
-Expected: OK on both, 231 tests.
+Expected: OK on both, 232 tests.
 
 - [ ] **Step 5: Commit**
 
@@ -403,7 +441,7 @@ Replace `test_the_renderer_reads_the_embedded_source_block_id` and
 
     def test_the_source_starts_on_the_line_after_the_opening_tag(self) -> None:
         # The prior art published every page this way, so changing it would rewrite
-        # nine live pages for nothing. See M4-c.
+        # every Markdown page an adopter has. See M4-c.
         page = render.render_markdown_page(
             ENTRY, b"# x\n", PurePosixPath("vendor/marked.min.js"), SITE, TEMPLATE
         ).decode("utf-8")
@@ -466,7 +504,7 @@ python3 -m unittest discover -s tests -t . 2>&1 | tail -3
 /usr/bin/python3 -m unittest discover -s tests -t . 2>&1 | tail -3
 ```
 
-Expected: OK on both, 232 tests.
+Expected: OK on both, 233 tests.
 
 - [ ] **Step 5: Commit**
 
@@ -483,26 +521,22 @@ git commit -m "fix(render): publish the markdown-source block the prior art publ
 **Files:**
 - Modify: `artefact_sync/catalogue.py` (replace `_invert`/`entry_sort_key` with `section_slug`;
   rewrite `render_catalogue`)
-- Modify: `artefact_sync/config.py` (`Site.section_links`, `site_from_dict`, `site_to_dict`)
 - Modify: `artefact_sync/assets/catalogue-template.html` (CSS class names)
-- Test: `tests/test_catalogue.py`, `tests/test_config.py`
+- Test: `tests/test_catalogue.py`
 
 **Interfaces:**
 - Consumes: `manifest.Manifest`, `manifest.Collection`, `manifest.Entry`, `config.Site`,
-  `config.site_from_dict`, `config.site_to_dict`, `catalogue.replace_generated_catalogue`,
-  `catalogue.render_standalone_catalogue`, `catalogue.public_href`.
+  `catalogue.replace_generated_catalogue`, `catalogue.render_standalone_catalogue`,
+  `catalogue.public_href`.
 - Produces: `catalogue.section_slug(value: str) -> str`; `catalogue.render_catalogue(manifest, site)`
-  keeps its signature and returns the prior art's markup; `config.Site` gains
-  `section_links: dict[str, str]`, defaulting to `{}`, read from
-  `site.catalogue.section_links` and re-emitted by `site_to_dict` only when non-empty.
-  `catalogue.entry_sort_key` and `catalogue._invert` are **removed**; nothing outside
-  `tests/test_catalogue.py` calls them.
+  keeps its signature and returns the prior art's markup. `catalogue.entry_sort_key` and
+  `catalogue._invert` are **removed**; nothing outside `tests/test_catalogue.py` calls them.
+  `config.py` is not touched — see M4-j.
 
 - [ ] **Step 1: Write the failing tests**
 
-Replace `class SortTests` in `tests/test_catalogue.py` with the following, and extend the module's
-helpers so a test can build more than one collection. Replace the `build` helper and add
-`collection`:
+In `tests/test_catalogue.py`, replace the `build` helper and add a `collection` helper so a test can
+construct more than one collection:
 
 ```python
 def collection(**overrides) -> Collection:
@@ -511,15 +545,15 @@ def collection(**overrides) -> Collection:
     return Collection(**body)
 
 
-def build(entries, collections=None, site=None) -> Manifest:
+def build(entries, collections=None) -> Manifest:
     return Manifest(
-        version=1, site=site or SITE, protected_files=(), ignored_sources=(),
+        version=1, site=SITE, protected_files=(), ignored_sources=(),
         collections=tuple(collections or (collection(),)),
         entries=tuple(entries),
     )
 ```
 
-Then:
+Then replace `class SortTests` entirely with:
 
 ```python
 class MarkupTests(unittest.TestCase):
@@ -539,8 +573,7 @@ class MarkupTests(unittest.TestCase):
         )
 
     def test_an_undated_card_says_nothing_about_dates(self) -> None:
-        fragment = catalogue.render_catalogue(build([entry()]), SITE)
-        self.assertNotIn("card-updated", fragment)
+        self.assertNotIn("card-updated", catalogue.render_catalogue(build([entry()]), SITE))
 
     def test_a_section_heading_id_is_slugged(self) -> None:
         fragment = catalogue.render_catalogue(
@@ -610,97 +643,17 @@ class EntryOrderTests(unittest.TestCase):
         ])
         fragment = catalogue.render_catalogue(manifest, SITE)
         self.assertLess(fragment.index(">First<"), fragment.index(">Second<"))
-
-
-class SectionLinkTests(unittest.TestCase):
-    def test_a_configured_section_link_rides_its_heading(self) -> None:
-        site = site_from_dict({
-            "base_url": "https://x.example/artefacts/",
-            "catalogue": {"mode": "standalone",
-                          "section_links": {"S": '\n<a href="showcase/">3D</a>\n'}},
-        })
-        fragment = catalogue.render_catalogue(build([entry()], site=site), site)
-        self.assertIn('<h2 id="s-heading">S\n<a href="showcase/">3D</a>\n</h2>', fragment)
-
-    def test_a_link_for_an_absent_section_changes_nothing(self) -> None:
-        site = site_from_dict({
-            "base_url": "https://x.example/artefacts/",
-            "catalogue": {"mode": "standalone", "section_links": {"Nowhere": "<b>x</b>"}},
-        })
-        self.assertNotIn("<b>x</b>", catalogue.render_catalogue(build([entry()], site=site), site))
 ```
 
-The module needs one more import for `SectionLinkTests`; the existing line
-`from artefact_sync.config import site_from_dict` already provides it.
-
-Add to `tests/test_config.py`:
-
-```python
-class SectionLinkTests(unittest.TestCase):
-    def test_section_links_round_trip_through_the_site_block(self) -> None:
-        raw = {"base_url": "https://x.example/artefacts/",
-               "catalogue": {"mode": "inject", "page": "index.html",
-                             "section_links": {"Images": "<a href='s/'>3D</a>"}}}
-        site = config.site_from_dict(raw)
-        self.assertEqual({"Images": "<a href='s/'>3D</a>"}, site.section_links)
-        self.assertEqual(raw["catalogue"], config.site_to_dict(site)["catalogue"])
-
-    def test_an_empty_section_link_map_is_omitted_from_the_emitted_json(self) -> None:
-        site = config.site_from_dict({"base_url": "https://x.example/artefacts/"})
-        self.assertNotIn("section_links", config.site_to_dict(site)["catalogue"])
-```
-
-`tests/test_config.py` already has `from artefact_sync import config`, which is what these two cases
-use. Add no import.
+The module already imports `Collection`; add no imports.
 
 - [ ] **Step 2: Run them to verify they fail**
 
-Run: `python3 -m unittest tests.test_catalogue tests.test_config -v`
-Expected: every new `MarkupTests`, `CardOrderTests`, `EntryOrderTests` and `SectionLinkTests` case
-fails, and both `test_config.py` cases fail with `TypeError` or `AttributeError` on
-`section_links`. `InjectionTests` and `StandaloneTests` keep passing.
+Run: `python3 -m unittest tests.test_catalogue -v`
+Expected: every new `MarkupTests`, `CardOrderTests` and `EntryOrderTests` case fails.
+`InjectionTests` and `StandaloneTests` keep passing.
 
-- [ ] **Step 3: Give `Site` a `section_links` map**
-
-In `artefact_sync/config.py`, change the import and the dataclass:
-
-```python
-from dataclasses import dataclass, field
-```
-
-```python
-@dataclass(frozen=True)
-class Site:
-    base_url: str
-    favicon: str
-    catalogue_mode: str
-    catalogue_page: PurePosixPath | None
-    section_links: dict = field(default_factory=dict)
-```
-
-The default matters: `selfcheck.PROBE_SITE` and several tests build `Site` positionally with four
-arguments and must keep working.
-
-In `site_from_dict`, before the `return`:
-
-```python
-    links = catalogue.get("section_links") or {}
-    if not isinstance(links, dict) or not all(
-        isinstance(key, str) and isinstance(value, str) for key, value in links.items()
-    ):
-        raise ConfigError("site.catalogue.section_links must map section titles to HTML strings")
-```
-
-and add `section_links=dict(links),` to the `Site(...)` call.
-
-In `site_to_dict`, after the `page` line:
-
-```python
-    if site.section_links:
-        catalogue["section_links"] = dict(site.section_links)
-```
-
-- [ ] **Step 4: Rewrite `render_catalogue`**
+- [ ] **Step 3: Rewrite `render_catalogue`**
 
 In `artefact_sync/catalogue.py`, add `import re` to the imports, delete `_invert` and
 `entry_sort_key`, and put this in their place:
@@ -742,11 +695,10 @@ def render_catalogue(manifest: Manifest, site: Site) -> str:
     lines: list[str] = []
     for (_, section_title), collections in sorted(sections.items()):
         heading_id = f"{section_slug(section_title)}-heading"
-        heading = html.escape(section_title) + site.section_links.get(section_title, "")
         lines.extend(
             [
                 f'        <section aria-labelledby="{heading_id}">',
-                f'            <h2 id="{heading_id}">{heading}</h2>',
+                f'            <h2 id="{heading_id}">{html.escape(section_title)}</h2>',
                 '            <div class="card-grid">',
             ]
         )
@@ -782,7 +734,7 @@ def render_catalogue(manifest: Manifest, site: Site) -> str:
     return "\n".join(lines)
 ```
 
-- [ ] **Step 5: Restyle the bundled standalone catalogue**
+- [ ] **Step 4: Restyle the bundled standalone catalogue**
 
 In `artefact_sync/assets/catalogue-template.html`, replace the two class rules with three that match
 the new markup:
@@ -793,9 +745,9 @@ the new markup:
         .card-updated { color: #666; font-size: 0.875rem; }
 ```
 
-- [ ] **Step 6: Run the tests to verify they pass**
+- [ ] **Step 5: Run the tests to verify they pass**
 
-Run: `python3 -m unittest tests.test_catalogue tests.test_config -v`
+Run: `python3 -m unittest tests.test_catalogue -v`
 Expected: PASS.
 
 Then both interpreters:
@@ -805,17 +757,16 @@ python3 -m unittest discover -s tests -t . 2>&1 | tail -3
 /usr/bin/python3 -m unittest discover -s tests -t . 2>&1 | tail -3
 ```
 
-Expected: OK on both, 244 tests. `tests/test_m1_end_to_end.py` and `tests/test_m3_end_to_end.py`
-assert `"cost-model/"` and similar hrefs are present in the catalogue, which the new markup still
-satisfies. If either fails on markup rather than on an href, fix the assertion, not the markup.
+Expected: OK on both, 240 tests. `tests/test_m1_end_to_end.py` and `tests/test_m3_end_to_end.py`
+assert on hrefs in the catalogue, which the new markup still satisfies. If either fails on markup
+rather than on an href, fix the assertion, not the markup.
 
-- [ ] **Step 7: Commit**
+- [ ] **Step 6: Commit**
 
 ```bash
-git add artefact_sync/catalogue.py artefact_sync/config.py \
-        artefact_sync/assets/catalogue-template.html \
-        tests/test_catalogue.py tests/test_config.py
-git commit -m "feat(catalogue): emit styleable markup, order cards by date, hook section links"
+git add artefact_sync/catalogue.py artefact_sync/assets/catalogue-template.html \
+        tests/test_catalogue.py
+git commit -m "feat(catalogue): emit styleable markup and order cards by date"
 ```
 
 ---
@@ -828,7 +779,7 @@ git commit -m "feat(catalogue): emit styleable markup, order cards by date, hook
 
 **Interfaces:**
 - Consumes: `manifest.head_manifest`, `manifest.check_published_invariants`,
-  `manifest.manifest_from_dict`, `manifest.manifest_to_json`, `tests.helpers.make_repo`.
+  `manifest.manifest_from_dict`, `tests.helpers.make_repo`.
 - Produces: no signature change. `head_manifest` returns `None` for an unparseable HEAD manifest
   instead of raising, and parses one that lacks `site` by injecting a placeholder before validating.
   `check_published_invariants` therefore still sees real `id`/`destination`/`title` values from a
@@ -836,7 +787,8 @@ git commit -m "feat(catalogue): emit styleable markup, order cards by date, hook
 
 - [ ] **Step 1: Write the failing tests**
 
-Add to `tests/test_manifest_invariants.py`:
+Add to `tests/test_manifest_invariants.py`. That module binds the package as `m`, and already
+imports `tempfile`, `Path` and `make_repo`; add `import json` at the top and nothing else.
 
 ```python
 class AdoptionTests(unittest.TestCase):
@@ -856,17 +808,16 @@ class AdoptionTests(unittest.TestCase):
             repo = make_repo(Path(tmp), {"artefacts/manifest.json": body.encode("utf-8")})
             head = m.head_manifest(repo)
             self.assertIsNotNone(head)
-            self.assertEqual(("a/index.html",), tuple(
-                e.destination.as_posix() for e in head.entries))
+            self.assertEqual(
+                ("a/index.html",),
+                tuple(e.destination.as_posix() for e in head.entries),
+            )
 
     def test_an_unreadable_head_manifest_leaves_the_invariants_unchecked(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             repo = make_repo(Path(tmp), {"artefacts/manifest.json": b"not json at all\n"})
             self.assertIsNone(m.head_manifest(repo))
 ```
-
-`tempfile`, `Path` and `make_repo` are already imported in that module, and it binds the package as
-`m`. Add `import json` at the top; add nothing else.
 
 - [ ] **Step 2: Run them to verify they fail**
 
@@ -878,7 +829,7 @@ Expected: `test_a_head_manifest_without_a_site_block_still_freezes_destinations`
 
 - [ ] **Step 3: Make the HEAD read lenient**
 
-In `artefact_sync/manifest.py`, replace the tail of `head_manifest`:
+In `artefact_sync/manifest.py`, replace `head_manifest`:
 
 ```python
 def head_manifest(repo_root: Path) -> Manifest | None:
@@ -888,8 +839,8 @@ def head_manifest(repo_root: Path) -> Manifest | None:
     which reads `id`, `destination` and `title`. A repository adopting the skill has a
     committed manifest with no `site` block, so failing the whole run on a field the
     check never touches would make adoption impossible — while returning None outright
-    would drop the URL-freeze guard on exactly the run where live destinations are at
-    stake. Injecting a placeholder keeps the guard.
+    would drop the URL-freeze guard on exactly the run where published destinations are
+    at stake. Injecting a placeholder keeps the guard.
     """
     result = subprocess.run(
         ["git", "show", f"HEAD:artefacts/{MANIFEST_NAME}"],
@@ -924,7 +875,7 @@ python3 -m unittest discover -s tests -t . 2>&1 | tail -3
 /usr/bin/python3 -m unittest discover -s tests -t . 2>&1 | tail -3
 ```
 
-Expected: OK on both, 246 tests.
+Expected: OK on both, 242 tests.
 
 - [ ] **Step 5: Commit**
 
@@ -935,18 +886,20 @@ git commit -m "fix(manifest): adopt a repo whose committed manifest predates the
 
 ---
 
-### Task 5: adopting a tree that already has published files, and `SKILL.md`
+### Task 5: adoption — the offline proof, the ignore-rule hazard, and `SKILL.md`
 
 **Files:**
 - Create: `tests/test_m4_adoption.py`
+- Modify: `tests/test_scan.py`
 - Modify: `SKILL.md`
 
 **Interfaces:**
-- Consumes: everything Tasks 1-4 produced, plus `cli.main`, `cli.EXIT_OK`,
+- Consumes: everything Tasks 1-4 produced, plus `cli.main`, `cli.EXIT_OK`, `scan.is_ignored`,
   `tests.helpers.make_repo`, `tests.helpers.make_source_tree`. Adds no new interface.
 
-This is the offline stand-in for Task 6. Task 6 runs the real thing once; this test runs the same
-shape on every commit forever, so the four fixes cannot silently regress after the gate is green.
+`test_m4_adoption.py` is the offline stand-in for Tasks 6 and 7. Those run the real comparison once;
+this runs the same shape on every commit forever, and it is where the CRLF path stays covered,
+because the real corpus has no CRLF source.
 
 - [ ] **Step 1: Write the adoption test**
 
@@ -965,12 +918,20 @@ from artefact_sync import cli
 from tests.helpers import make_repo, make_source_tree
 
 # A source with CRLF endings and no final newline: both normalisations at once.
+# The M4 probe corpus has neither, so this test is where that path stays covered.
 CRLF_NOTE = b"# Cost model\r\n\r\nBuild versus buy."
 PAGE = b"<html><head><title>P</title></head><body>Hi</body></html>\n"
+GIT_ENV = {"GIT_AUTHOR_NAME": "t", "GIT_AUTHOR_EMAIL": "t@t", "GIT_COMMITTER_NAME": "t",
+           "GIT_COMMITTER_EMAIL": "t@t", "PATH": "/usr/bin:/bin:/usr/local/bin"}
+
+
+def _commit(repo: Path, message: str) -> None:
+    for args in (["add", "-A"], ["commit", "-q", "-m", message]):
+        subprocess.run(["git", *args], cwd=repo, env=GIT_ENV, check=True)
 
 
 def _seed_published_tree(repo: Path, source: Path) -> Path:
-    """Publish once, commit, and hand back the manifest path.
+    """Publish once, commit, and hand back the pointer path.
 
     Committing matters: git normalises CRLF on commit under core.autocrlf=input, so
     the committed bytes are what a second machine — or a fresh clone — would see.
@@ -979,10 +940,7 @@ def _seed_published_tree(repo: Path, source: Path) -> Path:
     cli.main(["init", "--pointer", str(pointer), "--repo", str(repo), "--source", str(source)])
     cli.main(["plan", "--pointer", str(pointer)])
     cli.main(["sync", "--pointer", str(pointer), "--yes"])
-    env = {"GIT_AUTHOR_NAME": "t", "GIT_AUTHOR_EMAIL": "t@t", "GIT_COMMITTER_NAME": "t",
-           "GIT_COMMITTER_EMAIL": "t@t", "PATH": "/usr/bin:/bin:/usr/local/bin"}
-    for args in (["add", "-A"], ["commit", "-q", "-m", "publish"]):
-        subprocess.run(["git", *args], cwd=repo, env=env, check=True)
+    _commit(repo, "publish")
     return pointer
 
 
@@ -994,12 +952,14 @@ class AdoptionTests(unittest.TestCase):
             source = make_source_tree(root, {"note.md": CRLF_NOTE, "page.html": PAGE})
             pointer = _seed_published_tree(repo, source)
 
-            # Adoption from a clean checkout: nothing left to do, nothing to rewrite.
             self.assertEqual(cli.EXIT_OK, cli.main(["plan", "--pointer", str(pointer)]))
             self.assertEqual(cli.EXIT_OK, cli.main(["sync", "--pointer", str(pointer), "--yes"]))
-            self.assertEqual("", subprocess.run(
-                ["git", "status", "--short"], cwd=repo, capture_output=True, text=True,
-            ).stdout)
+            # git status can report a line-ending-only change; the commit diff cannot.
+            changed = subprocess.run(
+                ["git", "diff", "--name-only", "HEAD", "--", "artefacts"],
+                cwd=repo, capture_output=True, text=True,
+            ).stdout
+            self.assertEqual("", changed)
 
     def test_the_published_page_carries_no_carriage_returns(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -1017,65 +977,43 @@ class AdoptionTests(unittest.TestCase):
             repo = make_repo(root, {"README.md": b"x\n"})
             source = make_source_tree(root, {"note.md": b"# n\n"})
             pointer = _seed_published_tree(repo, source)
-            # Rewrite HEAD's manifest to the pre-site shape, as a real adopter's is.
+            # Rewrite HEAD's manifest to the pre-site shape a real adopter has.
             path = repo / "artefacts" / "manifest.json"
             body = json.loads(path.read_text(encoding="utf-8"))
             body.pop("site")
             path.write_text(json.dumps(body, indent=2) + "\n", encoding="utf-8")
-            env = {"GIT_AUTHOR_NAME": "t", "GIT_AUTHOR_EMAIL": "t@t",
-                   "GIT_COMMITTER_NAME": "t", "GIT_COMMITTER_EMAIL": "t@t",
-                   "PATH": "/usr/bin:/bin:/usr/local/bin"}
-            for args in (["add", "-A"], ["commit", "-q", "-m", "pre-site manifest"]):
-                subprocess.run(["git", *args], cwd=repo, env=env, check=True)
-            # Put the site block back in the working copy only, as the migration does.
+            _commit(repo, "pre-site manifest")
+            # Put the site block back in the working copy only, as adoption does.
             body["site"] = {"base_url": "https://x.example/artefacts/",
                             "catalogue": {"mode": "standalone"}}
             path.write_text(json.dumps(body, indent=2) + "\n", encoding="utf-8")
             self.assertEqual(cli.EXIT_OK, cli.main(["plan", "--pointer", str(pointer)]))
-
-    def test_a_host_page_keeps_its_section_link_across_a_sync(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
-            root = Path(tmp)
-            repo = make_repo(root, {"README.md": b"x\n"})
-            source = make_source_tree(root, {"note.md": b"# n\n"})
-            pointer = _seed_published_tree(repo, source)
-            path = repo / "artefacts" / "manifest.json"
-            body = json.loads(path.read_text(encoding="utf-8"))
-            section = body["collections"][0]["section"]
-            body["site"]["catalogue"]["section_links"] = {
-                section: '\n<a class="showcase-link" href="showcase/">3D</a>\n'
-            }
-            path.write_text(json.dumps(body, indent=2) + "\n", encoding="utf-8")
-            self.assertEqual(cli.EXIT_OK, cli.main(["sync", "--pointer", str(pointer), "--yes"]))
-            page = (repo / "artefacts" / "index.html").read_text(encoding="utf-8")
-            self.assertIn('<a class="showcase-link" href="showcase/">3D</a>', page)
-            # Convergent: the link is regenerated, not accumulated.
-            self.assertEqual(cli.EXIT_OK, cli.main(["sync", "--pointer", str(pointer), "--yes"]))
-            self.assertEqual(1, (repo / "artefacts" / "index.html")
-                             .read_text(encoding="utf-8").count("showcase-link"))
 ```
 
-- [ ] **Step 2: Run it**
+- [ ] **Step 2: Pin the ignore-rule hazard**
 
-Run: `python3 -m unittest tests.test_m4_adoption -v` and again under `/usr/bin/python3`.
-Expected: both PASS. If `test_a_published_tree_is_not_rewritten_on_re_adoption` fails with
-`M artefacts/...`, one of Tasks 1-4 is incomplete; do not weaken the assertion.
+Add to `tests/test_scan.py`, beside the existing `is_ignored` cases:
 
-- [ ] **Step 3: Update `SKILL.md`**
-
-In the "Manifest" section, replace the `site` line of the shape block:
-
-```text
-  site: {base_url, favicon, catalogue: {mode, page?, section_links?}},
+```python
+    def test_a_bare_directory_rule_matches_that_directory_at_any_depth(self) -> None:
+        # The prior art matched a "dir/" rule only at the root, which is why manifests
+        # written by it carry full prefixes like "fde/prompts/". Carrying such a
+        # manifest over and shortening a rule silently widens it. See M4-i.
+        self.assertTrue(scan.is_ignored(PurePosixPath("a/b/prompts/x.md"), ("prompts/",)))
+        self.assertTrue(scan.is_ignored(PurePosixPath("prompts/x.md"), ("prompts/",)))
+        self.assertFalse(scan.is_ignored(PurePosixPath("a/prompts.md"), ("prompts/",)))
 ```
 
-and add a paragraph after the one that ends "stored in the manifest":
+- [ ] **Step 3: Run both**
 
-```markdown
-`site.catalogue.section_links` maps a section title to raw HTML appended inside that section's
-`<h2>`. It exists for a host page that hangs its own link off a heading the catalogue regenerates.
-The value is inserted verbatim, so it carries its own whitespace and is escaped by nobody.
-```
+Run: `python3 -m unittest tests.test_m4_adoption tests.test_scan -v`, and again under
+`/usr/bin/python3`.
+Expected: all PASS. The `test_scan.py` case passes immediately — it pins behaviour `manifest.is_ignored`
+already has, which the probe exposed and nothing covered. If
+`test_a_published_tree_is_not_rewritten_on_re_adoption` reports a changed file, one of Tasks 1-4 is
+incomplete; do not weaken the assertion.
+
+- [ ] **Step 4: Update `SKILL.md`**
 
 Add a new section immediately before `## Safety`:
 
@@ -1091,17 +1029,21 @@ this order, and never delete a published file to resolve a mismatch.
    from a `str.format` template, convert `{name}` to `$name` and collapse `{{` and `}}` to single
    braces. Placeholders are `$title`, `$favicon`, `$prefix`, `$vendor`, `$markdown`, `$block_start`
    and `$block_end`; the vendor script tag is `src="$prefix$vendor"`.
-3. Add any ignore rules the tree relied on. Dotfile directories are the usual gap: `.*` covers them.
+3. Keep the `ignored_sources` rules exactly as they are, including any long prefixes. A rule ending
+   in `/` matches that directory name at any depth, so shortening `docs/prompts/` to `prompts/`
+   silently ignores every other `prompts` directory, and those files then read as deletions.
+   Dotfile directories are the usual gap in an older manifest: `.*` covers them.
 4. Run `plan`. Every entry that reports as changed is a rendering difference to explain before you
    sync, not after. `manifest.json` always changes on the first run, because absent `date` values
    are stamped from source modification time.
-5. Run `sync`, then `git status`. Anything beyond `artefacts/manifest.json` and
-   `artefacts/page-template.html` means the tool renders that file differently from whatever built
-   it. Stop and read the diff.
+5. Run `sync`, then `git diff --name-only HEAD -- artefacts`. Anything beyond
+   `artefacts/manifest.json` means the tool renders that file differently from whatever built it.
+   Stop and read the diff. Use `git diff`, not `git status`: with `core.autocrlf` set, status
+   reports a working-tree line-ending change that commits as nothing.
 6. Run `plan` again. It must report no change groups. That is the proof the adoption converged.
 ```
 
-- [ ] **Step 4: Run the whole suite on both interpreters**
+- [ ] **Step 5: Run the whole suite on both interpreters**
 
 ```bash
 python3 -m unittest discover -s tests -t . 2>&1 | tail -3
@@ -1109,430 +1051,457 @@ python3 -m unittest discover -s tests -t . 2>&1 | tail -3
 git -C /Users/keli/dev/github-kevinlin/kevinlin.github.io status --short
 ```
 
-Expected: OK on both, 250 tests. The third command prints nothing.
+Expected: OK on both, 246 tests. The third command prints nothing.
 
-- [ ] **Step 5: Commit**
+- [ ] **Step 6: Commit**
 
 ```bash
-git add tests/test_m4_adoption.py SKILL.md
+git add tests/test_m4_adoption.py tests/test_scan.py SKILL.md
 git commit -m "test: prove an existing published tree survives adoption unrewritten"
 ```
 
 ---
 
-### Task 6: the dry run — the gate, against a clone
+### Task 6: the fixture — a probe tree the prior art published
 
 **Files:**
-- Create: `docs/specs/m4-acceptance.md`
-- Modify: `docs/specs/design_artefact-sync.md` (corrections M4-a to M4-i)
+- Creates outside the repository: `~/dev/github-kevinlin/artefacts-test`
+- Reads only: `~/Downloads/Claude-Artefacts`, and `scripts/artefacts.py` from the profile repository
 
 **Interfaces:**
-- Consumes: the whole CLI. Produces no code.
+- Produces the probe repository Task 7 consumes. No code in this repository changes.
 
-Nothing in this task writes to `/Users/keli/dev/github-kevinlin/kevinlin.github.io`. Everything runs
-against a clone in the scratch directory. Run the whole task before Task 7 changes anything real.
+Nothing here runs the skill. The deliverable is a published tree with a known provenance: the prior
+art wrote every byte of it.
 
-Numbers below are what a run against live HEAD `280b17e` produced while this plan was written. A
-mismatch is information: record it, do not adjust an assertion to hide it.
+- [ ] **Step 1: Inventory the source folder, and re-check the live corpus**
 
-- [ ] **Step 1: Re-measure the live tree, read-only**
+The corpus is real and mutable, so record what it was. This is the reproducibility substitute for a
+generated fixture, and it belongs in the acceptance record.
+
+```bash
+python3 - <<'PY'
+import hashlib
+from pathlib import Path
+root = Path.home() / "Downloads" / "Claude-Artefacts"
+for path in sorted(root.rglob("*")):
+    if not path.is_file() or path.name == ".DS_Store":
+        continue
+    data = path.read_bytes()
+    print(f"{len(data):>10,}  {hashlib.sha256(data).hexdigest()[:16]}  "
+          f"{path.relative_to(root).as_posix()}")
+PY
+```
+
+Expected, from when this plan was written:
+
+```
+    31,911  914adf545f413e5d  coding-agent-adoption.html
+     1,792  4b2db67d0104453f  mingpt-vs-toy-transformer/analysis.md
+ 2,130,205  b27c7bc35470172b  mingpt-vs-toy-transformer/infographic.png
+     4,414  a2df7bb56c8417f1  mingpt-vs-toy-transformer/prompts/infographic.md
+     3,663  f2c5bceae501232f  mingpt-vs-toy-transformer/source-mingpt-vs-toy-transformer.md
+     2,718  29d2fee296373266  mingpt-vs-toy-transformer/structured-content.md
+    38,189  1e159c345d2ad99a  star-wars-timeline.html
+```
+
+A different list is not a failure — the folder is real and may have moved on. Record what you got,
+and expect the entry count in Task 7 to move with it.
+
+Then confirm the live corpus is still what the coverage table in "Why a probe" was written against.
+This reads the profile repository and writes nothing:
 
 ```bash
 SITE=/Users/keli/dev/github-kevinlin/kevinlin.github.io
-git -C "$SITE" log --oneline -1
 git -C "$SITE" status --short          # must print nothing
 python3 - <<'PY'
 import json
 from pathlib import Path
+from collections import Counter
 from artefact_sync import scan
-from artefact_sync.manifest import APPROVED_EXTENSIONS
 site = Path("/Users/keli/dev/github-kevinlin/kevinlin.github.io")
-source = Path.home() / "Downloads" / "Artefacts"
 raw = json.loads((site / "artefacts" / "manifest.json").read_text())
-print("entries", len(raw["entries"]), "collections", len(raw["collections"]),
+print("live entries", len(raw["entries"]), "collections", len(raw["collections"]),
       "protected", len(raw["protected_files"]))
-inventory = scan.scan_source(source, site)
-kept, counts = scan.apply_source_ignores(inventory, tuple(raw["ignored_sources"]))
+print("live entry suffixes", Counter(Path(e["source"]).suffix for e in raw["entries"]))
+inventory = scan.scan_source(Path.home() / "Downloads" / "Artefacts", site)
+kept, _ = scan.apply_source_ignores(inventory, tuple(raw["ignored_sources"]))
 listed = {e["source"] for e in raw["entries"]}
-unlisted = [p.as_posix() for p in kept.approved if p.as_posix() not in listed]
-print("approved", len(inventory.approved), "after ignores", len(kept.approved),
-      "unlisted", len(unlisted))
-for path in unlisted:
-    print("   unlisted:", path)
+print("live approved", len(inventory.approved), "after ignores", len(kept.approved),
+      "unlisted", len([p for p in kept.approved if p.as_posix() not in listed]))
+PY
+git -C "$SITE" status --short          # must still print nothing
+```
+
+Reference values against live HEAD `280b17e`: 56 entries, 31 collections, 36 protected; 26 `.png`,
+14 `.html`, 9 `.md`, 5 `.jpeg`, 2 `.jpg`; 128 approved, 66 after ignores, 10 unlisted.
+
+- [ ] **Step 2: Create the probe repository shell**
+
+The prior art cannot run in a repository whose catalogue shell is missing, so the shell comes first.
+It is also the host page whose CSS Task 3's markup has to fit, which is the point.
+
+```bash
+PROBE=~/dev/github-kevinlin/artefacts-test
+mkdir -p "$PROBE/artefacts/vendor" "$PROBE/artefacts/showcase"
+cp /Users/keli/dev/ai-practitioner/artefact-sync/artefact_sync/assets/marked.min.js \
+   "$PROBE/artefacts/vendor/marked.min.js"
+```
+
+Write `$PROBE/artefacts/showcase/index.html` — a hand-written page the tool must never touch, which
+is how the gate covers `protected_files`:
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><title>Showcase</title></head>
+<body><p>Stand-in for a hand-written page the tool must never touch.</p></body>
+</html>
+```
+
+Write `$PROBE/artefacts/index.html`, the host page:
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Artefacts</title>
+    <style>
+        body { margin: 0 auto; max-width: 72rem; padding: 2rem 1rem;
+               font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+        .card-grid { display: grid; gap: 1rem;
+                     grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr)); }
+        .card { padding: 1rem; border: 1px solid #ddd; border-radius: 0.5rem; }
+        .card-updated { color: #666; font-size: 0.875rem; }
+    </style>
+</head>
+<body>
+    <main>
+        <h1>Artefacts</h1>
+<!-- ARTEFACTS:START -->
+<!-- ARTEFACTS:END -->
+    </main>
+</body>
+</html>
+```
+
+Write `$PROBE/artefacts/manifest.json` in the prior art's schema — no `site` block, because that is
+the shape an adopter actually has, and Task 4 exists for it. The ignore rule carries its full prefix
+so both implementations match it identically; see M4-i:
+
+```json
+{
+  "version": 1,
+  "protected_files": [
+    "showcase/index.html",
+    "vendor/marked.min.js"
+  ],
+  "ignored_sources": [
+    "mingpt-vs-toy-transformer/prompts/"
+  ],
+  "collections": [],
+  "entries": []
+}
+```
+
+Then:
+
+```bash
+git -C "$PROBE" init -q -b main
+git -C "$PROBE" add -A
+git -C "$PROBE" commit -q -m "probe shell"
+git -C "$PROBE" ls-files
+```
+
+Expected: the four files above.
+
+- [ ] **Step 3: Publish the probe tree with the prior art**
+
+Copy the script out rather than running it in place, so the profile repository is never even a
+working directory, and use `-B` so no bytecode is written anywhere near it.
+
+```bash
+SITE=/Users/keli/dev/github-kevinlin/kevinlin.github.io
+cp "$SITE/scripts/artefacts.py" /tmp/artefacts_prior_art.py
+git -C "$SITE" status --short          # must print nothing
+```
+
+The first run proposes and stops; the second applies. `apply` prompts, so drive it through `main`'s
+injectable `input_fn`:
+
+```bash
+cd /tmp
+python3 -B - <<'PY'
+import sys
+from pathlib import Path
+sys.path.insert(0, "/tmp")
+import artefacts_prior_art as artefacts
+probe = str(Path.home() / "dev/github-kevinlin/artefacts-test")
+source = str(Path.home() / "Downloads/Claude-Artefacts")
+for round_number in (1, 2):
+    code = artefacts.main(["apply", "--repo", probe, "--source", source],
+                          input_fn=lambda prompt: "yes")
+    print(f"round {round_number}: exit {code}")
 PY
 ```
 
-Expected: `56 entries`, `31 collections`, `36 protected`, `approved 128`, `after ignores 66`,
-`unlisted 10`, and all ten under `.firecrawl/`. If the unlisted list is not exactly the dotfile
-directory, read every new name before adding an ignore rule — a genuinely new artefact belongs in
-the manifest, not in `ignored_sources`.
+Expected: round 1 exits 3 with `Wrote artefacts/manifest.json. Review the derived titles and
+descriptions, then run the command again to publish.` and 6 proposals; round 2 exits 0, applies, and
+reports `Ignored sources (1) - mingpt-vs-toy-transformer/prompts/ (1 file)`.
 
-- [ ] **Step 2: Clone the site and write the migration prep**
+Then read what it produced:
 
 ```bash
-SCRATCH="$(mktemp -d)"
-git clone --quiet --no-hardlinks /Users/keli/dev/github-kevinlin/kevinlin.github.io "$SCRATCH/site"
-echo "$SCRATCH"
+PROBE=~/dev/github-kevinlin/artefacts-test
+find "$PROBE/artefacts" -type f | sed "s|$PROBE/artefacts/||" | sort
+python3 -c "
+import json, pathlib
+m = json.loads((pathlib.Path.home() / 'dev/github-kevinlin/artefacts-test/artefacts/manifest.json').read_text())
+print('entries', len(m['entries']), 'collections', len(m['collections']))
+for c in m['collections']: print(' ', c['id'], repr(c['section']))
+"
+grep -o '<h2 id="[^"]*"' "$PROBE/artefacts/index.html"
 ```
 
-Then, from the skill repository root:
+Expected: 10 files — 6 entry destinations, `index.html`, `manifest.json`, `showcase/index.html`,
+`vendor/marked.min.js`; 6 entries in 2 collections (`coding-agent-adoption` and
+`mingpt-vs-toy-transformer`), both in `Presentations and analysis`; and one section heading,
+`presentations-and-analysis-heading`.
+
+One section means the prior art emits no showcase link, which is why M4-j leaves `section_links`
+unbuilt. Note the collection named `coding-agent-adoption` holding both root-level pages: that is the
+prior art's root-collection naming, the defect M3-b fixed in the skill's proposer. The skill reads
+this manifest rather than re-deriving it, so it inherits the name and nothing diverges.
+
+- [ ] **Step 4: Commit the baseline and check the profile repository**
 
 ```bash
-python3 - "$SCRATCH" <<'PY'
+PROBE=~/dev/github-kevinlin/artefacts-test
+git -C "$PROBE" add -A
+git -C "$PROBE" commit -m "publish via the prior art"
+git -C "$PROBE" log --oneline
+git -C /Users/keli/dev/github-kevinlin/kevinlin.github.io status --short
+```
+
+Expected: two commits, and the last command prints nothing.
+
+---
+
+### Task 7: the gate — the skill reproduces the prior art, byte for byte
+
+**Files:**
+- Create: `docs/specs/m4-acceptance.md` (rows 1 onwards)
+- Modify: `docs/specs/design_artefact-sync.md` (corrections M4-a to M4-k)
+- Modifies outside the repository: the probe repository's `artefacts/`
+
+**Interfaces:**
+- Consumes: the whole CLI, and Task 6's committed probe tree. Produces no code.
+
+Numbers below are what a run produced while this plan was written, with all four fixes applied to a
+scratch copy of the package. A mismatch is information: record it, do not adjust an assertion to
+hide it.
+
+- [ ] **Step 1: Write the adoption prep**
+
+Two things the prior art's tree does not carry: a `site` block and a `page-template.html`. Leave both
+uncommitted, so this run also proves Task 4 against a HEAD manifest that has no `site`. No dotfile
+rule is added — this corpus has no dotfile directory, and adding a rule that matches nothing would
+only pad the diff.
+
+```bash
+cd /Users/keli/dev/ai-practitioner/artefact-sync
+python3 -B - <<'PY'
 import json, re, sys
 from pathlib import Path
-scratch = Path(sys.argv[1])
-sys.path.insert(0, "/Users/keli/dev/github-kevinlin/kevinlin.github.io/scripts")
-import artefacts
+sys.path.insert(0, "/tmp")
+import artefacts_prior_art as artefacts
 
-# The template, converted for string.Template. Sentinels first so a literal {{word}}
-# could never be mistaken for a placeholder; the constant has no "$", so nothing needs
-# doubling on the way out.
+probe = Path.home() / "dev/github-kevinlin/artefacts-test"
+
+# The page template, converted for string.Template. Sentinels first, so a literal
+# {{word}} could never be mistaken for a placeholder; the constant has no "$", so
+# nothing needs doubling on the way out.
 text = artefacts.MARKDOWN_PAGE_TEMPLATE
 assert "$" not in text and "\x00" not in text and "\x01" not in text
 text = text.replace("{{", "\x00").replace("}}", "\x01")
 text = re.sub(r"\{(\w+)\}", r"$\1", text)
 text = text.replace("\x00", "{").replace("\x01", "}")
-(scratch / "site/artefacts/page-template.html").write_text(text, encoding="utf-8")
+(probe / "artefacts/page-template.html").write_text(text, encoding="utf-8")
 
-path = scratch / "site/artefacts/manifest.json"
+path = probe / "artefacts/manifest.json"
 old = json.loads(path.read_text(encoding="utf-8"))
 new = {
     "version": old["version"],
     "site": {
-        "base_url": "https://kevinlin.github.io/artefacts/",
+        "base_url": "https://kevinlin.github.io/artefacts-test/artefacts/",
         "favicon": artefacts.FAVICON_LINK,
-        "catalogue": {
-            "mode": "inject",
-            "page": "index.html",
-            "section_links": {
-                artefacts.IMAGE_SECTION: f"\n{artefacts.SHOWCASE_LINK}\n            ",
-            },
-        },
+        "catalogue": {"mode": "inject", "page": "index.html"},
     },
     "protected_files": old["protected_files"],
-    "ignored_sources": sorted(old["ignored_sources"] + [".*"]),
+    "ignored_sources": old["ignored_sources"],
     "collections": old["collections"],
     "entries": old["entries"],
 }
 path.write_text(json.dumps(new, indent=2) + "\n", encoding="utf-8")
 
-(scratch / "pointer.json").write_text(json.dumps({
-    "repo": str(scratch / "site"),
-    "source": str(Path.home() / "Downloads" / "Artefacts"),
+pointer = Path.home() / ".config/artefact-sync/config.json"
+pointer.parent.mkdir(parents=True, exist_ok=True)
+pointer.write_text(json.dumps({
+    "repo": str(probe),
+    "source": str(Path.home() / "Downloads/Claude-Artefacts"),
     "push": "direct",
 }, indent=2) + "\n", encoding="utf-8")
-print("prep written, uncommitted")
+print("adoption prep written, uncommitted")
 PY
 ```
 
-The prep stays uncommitted on purpose: the clone's HEAD manifest has no `site` block, so this run is
-also the live proof of Task 4.
-
-- [ ] **Step 3: Run the gate**
+- [ ] **Step 2: Run the gate**
 
 ```bash
-python3 -m artefact_sync plan --pointer "$SCRATCH/pointer.json" \
-  | grep -E '^[A-Z][A-Z ]*\([0-9]+\)|^  https|^no changes'
-```
-
-Expected, exactly:
-
-```
-CHANGED (1)
-  https://kevinlin.github.io/artefacts/manifest.json
-EXCLUDED (161)
-WARNINGS (38)
-```
-
-No `NEW PUBLIC URLS`, no `WILL START 404-ING`, no `BLOCKED`, and exit 0. `manifest.json` is the only
-change because absent `date` values get stamped; every published page and image is already correct.
-
-The 38 warnings are 30 `external` and 8 `secret`. Read all 8 secret rows before continuing. Five sit
-in Markdown sources and three in `everything-llm/swe_bench_pro_by_lab.html`, and every one is the
-40-hex rule firing on a git SHA or a benchmark id. Confirm that, in the record, by name.
-
-Then apply and check the diff surface:
-
-```bash
-python3 -m artefact_sync sync --pointer "$SCRATCH/pointer.json" --yes > /dev/null
-git -C "$SCRATCH/site" status --short
-python3 -m artefact_sync plan --pointer "$SCRATCH/pointer.json" \
-  | grep -E '^[A-Z][A-Z ]*\([0-9]+\)|^no changes'
-python3 -m artefact_sync validate --pointer "$SCRATCH/pointer.json" > /dev/null; echo "validate=$?"
+python3 -m artefact_sync plan | grep -E '^[A-Z][A-Z ]*\([0-9]+\)|^  '
 ```
 
 Expected:
 
 ```
- M artefacts/manifest.json
-?? artefacts/page-template.html
-EXCLUDED (161)
-WARNINGS (38)
-validate=0
+CHANGED (1)
+  https://kevinlin.github.io/artefacts-test/artefacts/manifest.json
+EXCLUDED (1)
+  mingpt-vs-toy-transformer/prompts/ 1 file, matched an ignored source rule
+WARNINGS (8)
+  external  coding-agent-adoption.html:592    loads https://www.anthropic.com/... at runtime
+  ... six more from coding-agent-adoption.html, lines 593-598
+  external  star-wars-timeline.html:462    loads https://mp.weixin.qq.com/... at runtime
 ```
 
-The second `plan` shows no change group at all. That is convergence, and it is the gate.
+No `NEW PUBLIC URLS`, no `WILL START 404-ING`, no `BLOCKED`, exit 0. `manifest.json` changes because
+absent `date` values get stamped; nothing else changes at all, which is already most of the gate.
+
+All 8 warnings are off-site references in the two hand-built HTML pages. Read them: they are
+citation links in the page body, not runtime dependencies, and `plan` warns on any external
+reference by design because it cannot tell the difference.
+
+- [ ] **Step 3: Prove no published byte moved**
+
+```bash
+PROBE=~/dev/github-kevinlin/artefacts-test
+python3 -m artefact_sync sync --yes > /dev/null
+git -C "$PROBE" diff --name-only HEAD -- artefacts
+git -C "$PROBE" ls-files --others --exclude-standard artefacts
+git -C "$PROBE" add -A artefacts && git -C "$PROBE" diff --cached --name-status
+git -C "$PROBE" reset -q
+```
+
+Expected:
+
+```
+artefacts/manifest.json
+artefacts/page-template.html
+M	artefacts/manifest.json
+A	artefacts/page-template.html
+```
+
+That is the gate. All 6 entry destinations, both protected files and the injected
+`artefacts/index.html` are byte-identical to what the prior art committed.
 
 - [ ] **Step 4: Prove the manifest diff is only what was intended**
 
 ```bash
-git -C "$SCRATCH/site" diff -U0 -- artefacts/manifest.json | grep -c '^+.*"date"'
-git -C "$SCRATCH/site" diff -U0 -- artefacts/manifest.json \
-  | grep -E '^[+-]' | grep -vE '"date"|"replacements"' | grep -vE '^(\+\+\+|---)'
+PROBE=~/dev/github-kevinlin/artefacts-test
+git -C "$PROBE" diff -U0 -- artefacts/manifest.json | grep -c '^+.*"date"'
+git -C "$PROBE" diff -U0 -- artefacts/manifest.json \
+  | grep -E '^[+-]' | grep -vE '"date"|"replacements"|"favicon"|^(\+\+\+|---)'
 ```
 
-Expected: `56` dates added, and the remaining lines are only the `site` block, `".*"` in
-`ignored_sources`, `catalogue.section_links`, and one title where `—` becomes a literal em
-dash — the skill emits `ensure_ascii=False`, the prior art did not. Any other line is a defect: stop
-and diagnose it.
+Expected: `6` dates added, and the remaining lines only the `site` block:
 
-- [ ] **Step 5: Prove no published byte moved**
+```
++  "site": {
++    "base_url": "https://kevinlin.github.io/artefacts-test/artefacts/",
++    "catalogue": {
++      "mode": "inject",
++      "page": "index.html"
++    }
++  },
+```
+
+Any other line is a defect: stop and diagnose it.
+
+- [ ] **Step 5: Prove convergence, and validate**
 
 ```bash
-git -C "$SCRATCH/site" diff --name-only HEAD -- artefacts
-git -C "$SCRATCH/site" ls-files --others --exclude-standard artefacts
+python3 -m artefact_sync plan | grep -E '^[A-Z][A-Z ]*\([0-9]+\)'
+python3 -m artefact_sync validate > /dev/null; echo "validate=$?"
 ```
 
-Expected: `artefacts/manifest.json` and nothing else from the first command;
-`artefacts/page-template.html` and nothing else from the second. That statement covers all 56 entry
-destinations, all 36 protected files and `artefacts/index.html`.
+Expected: `EXCLUDED (1)` and `WARNINGS (8)` and no change group at all, then `validate=0`. A second
+run that changes nothing is convergence, and it is the half of the gate an entry-by-entry byte
+comparison cannot show.
 
-- [ ] **Step 6: Check the live working tree's one known difference**
-
-The live working tree is not identical to its own committed blobs: `core.autocrlf = input` is set in
-`~/.gitconfig`, and one source (`agent-harness/20260713_loop-engineering-raw.md`) has CRLF endings,
-so git stored the page it renders to with 16 CRs removed. Confirm that is still the only such file:
+- [ ] **Step 6: Commit the adoption on the probe**
 
 ```bash
-SITE=/Users/keli/dev/github-kevinlin/kevinlin.github.io
-python3 - <<'PY'
-import subprocess
-from pathlib import Path
-site = Path("/Users/keli/dev/github-kevinlin/kevinlin.github.io")
-for path in sorted((site / "artefacts").rglob("*")):
-    if not path.is_file():
-        continue
-    relative = path.relative_to(site).as_posix()
-    result = subprocess.run(["git", "show", f"HEAD:{relative}"], cwd=site, capture_output=True)
-    if result.returncode != 0:
-        print("untracked:", relative)
-    elif result.stdout != path.read_bytes():
-        print("differs from blob:", relative,
-              f"working={path.read_bytes().count(b'\\r')}CR blob={result.stdout.count(b'\\r')}CR")
-PY
+PROBE=~/dev/github-kevinlin/artefacts-test
+git -C "$PROBE" add -A
+git -C "$PROBE" commit -m "adopt the artefact-sync skill"
+git -C /Users/keli/dev/github-kevinlin/kevinlin.github.io status --short
 ```
 
-Expected: two untracked `.DS_Store` files, and
-`artefacts/agent-harness/20260713-loop-engineering-raw/index.html` with `working=16CR blob=0CR`.
-Consequence for Task 7: `plan` against the live working tree reports that one entry as CHANGED where
-the clone reported nothing, `sync` rewrites it to LF, and the commit contains no change for that
-path because git had already normalised it. Task 1 is what makes this converge instead of recurring
-on every run forever.
+Expected: one commit touching two files, and the profile repository printing nothing.
 
 - [ ] **Step 7: Write the acceptance record**
 
 Create `docs/specs/m4-acceptance.md`, following the shape of
 [m2-acceptance.md](m2-acceptance.md): a numbered table with `#`, `Command`, `Expected`, `Result`,
-one row per step above, then a "What the run found" section and a "Result" line. Cover Steps 1-6 as
-rows 1-6 and leave rows 7 onwards for Task 8, so the whole gate lives in one document. Record the
-actual figures, not the predicted ones.
+one row per step in Tasks 6 and 7, then a "What the run found" section and a "Result" line. Leave the
+remaining rows for Task 8, so the whole gate lives in one document. Include Task 6 Step 1's source
+inventory verbatim — the folder is real and mutable, and that table is the only record of what the
+gate actually ran against. Record the actual figures, not the predicted ones. State in the opening
+paragraph that the gate ran against a probe pair and that `kevinlin.github.io` was neither migrated
+nor modified.
 
 - [ ] **Step 8: Apply the corrections to the design**
 
-In `docs/specs/design_artefact-sync.md`, add M4-a to M4-i from this plan's "Corrections to the
+In `docs/specs/design_artefact-sync.md`, add M4-a to M4-k from this plan's "Corrections to the
 design this plan applies" table to the "Changes to the requirement" table, and make these edits in
 place:
 
 - "Rendering": state the invariant as text-exact after UTF-8 decode, line-ending normalisation and
   trailing-newline normalisation, and correct "55 doubled-brace escapes" to 36 pairs.
-- "Rendering": add `section_links` to the `site.catalogue` shape and note that inject mode reuses the
-  fragment markup, so the host page's CSS is what pins the class names.
-- "Schemas": add `section_links?` to the `site` line.
-- "Release ladder" and "Testing": 56 entries, not 57.
-- "Release ladder": the atlas rehomes to a documented manual step, per M4-h.
+- "Rendering": note that inject mode reuses the fragment markup, so the host page's CSS is what pins
+  the class names.
+- "Schemas": note that a `dir/` ignore rule matches at any depth, per M4-i.
+- "Release ladder": M4's gate is a disposable probe pair, per M4-h; migrating `kevinlin.github.io`
+  moves out of the ladder and into a follow-on, with `section_links` (M4-j) and the atlas as its two
+  unbuilt prerequisites. Correct "57 real entries" to 56 there and in "Testing".
 
-- [ ] **Step 9: Clean up and commit**
+- [ ] **Step 9: Commit**
 
 ```bash
-rm -rf "$SCRATCH"
-git -C /Users/keli/dev/github-kevinlin/kevinlin.github.io status --short
+cd /Users/keli/dev/ai-practitioner/artefact-sync
 git add docs/specs/m4-acceptance.md docs/specs/design_artefact-sync.md
-git commit -m "docs: record the M4 dry run and the design corrections it forced"
+git commit -m "docs: record the M4 fidelity gate against a prior-art probe tree"
 ```
-
-Expected: the status command prints nothing.
 
 ---
 
-### Task 7: the site side — rehome the atlas, retire the prior art
-
-**Files (all in `/Users/keli/dev/github-kevinlin/kevinlin.github.io`, on a branch):**
-- Delete: `scripts/artefacts.py`, `tests/test_artefacts.py`, `scripts/__pycache__`,
-  `tests/__pycache__`
-- Modify: `.github/workflows/validate-artefacts.yml`, `CLAUDE.md`, `AGENTS.md`, `README.md`
-- Keep untouched: `scripts/build_showcase_atlas.py`
-
-**Interfaces:**
-- Consumes nothing from the skill repository. Produces the site-side state Task 8 publishes into.
-
-This is the first task that writes to the live repository. It writes no file under `artefacts/`, so
-Task 8's `publish` preflight — which refuses any change outside `artefacts/` — forces this task to be
-merged before Task 8 runs. Do it as a pull request, which is also how this repository has taken every
-recent change.
-
-- [ ] **Step 1: Branch**
-
-```bash
-SITE=/Users/keli/dev/github-kevinlin/kevinlin.github.io
-git -C "$SITE" status --short          # must print nothing
-git -C "$SITE" switch -c retire-artefacts-script
-```
-
-- [ ] **Step 2: Delete the prior art**
-
-```bash
-git -C "$SITE" rm -q scripts/artefacts.py tests/test_artefacts.py
-rm -rf "$SITE/scripts/__pycache__" "$SITE/tests/__pycache__"
-```
-
-Two copies of the same logic running against one live tree is the drift the design's D1 exists to
-prevent. `scripts/build_showcase_atlas.py` stays: it is site-specific, needs `ffmpeg`, and was never
-ported.
-
-- [ ] **Step 3: Rewrite the workflow**
-
-Replace `.github/workflows/validate-artefacts.yml` entirely:
-
-```yaml
-name: Validate artefacts
-
-on:
-  pull_request:
-    paths:
-      - ".github/workflows/validate-artefacts.yml"
-      - "artefacts/**"
-
-permissions:
-  contents: read
-
-jobs:
-  validate:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-      - name: Check the manifest parses and every declared file is present
-        run: |
-          python3 - <<'PY'
-          import json, sys
-          from pathlib import Path
-          root = Path("artefacts")
-          manifest = json.loads((root / "manifest.json").read_text(encoding="utf-8"))
-          declared = [entry["destination"] for entry in manifest["entries"]]
-          declared += manifest["protected_files"]
-          missing = [name for name in declared if not (root / name).is_file()]
-          duplicates = sorted({name for name in declared if declared.count(name) > 1})
-          for name in missing:
-              print(f"missing: artefacts/{name}")
-          for name in duplicates:
-              print(f"declared twice: artefacts/{name}")
-          sys.exit(1 if missing or duplicates else 0)
-          PY
-```
-
-`artefact-sync validate` is not run here on purpose: the skill is not installed on the runner, and
-installing it would put the tool's own version drift into the site's CI. What CI can still catch
-without the tool is a manifest that names a file the tree does not have — which is the failure a
-half-applied sync leaves behind.
-
-- [ ] **Step 4: Rehome the atlas into the documentation**
-
-In both `CLAUDE.md` and `AGENTS.md`, replace the numbered item 2 and the command block that follows
-it. Find the paragraph beginning "**The artefact publishing pipeline** — `scripts/artefacts.py`" and
-the fenced block containing `python3 scripts/artefacts.py plan`, and put this in their place:
-
-````markdown
-2. **The artefact publishing pipeline** — the `artefact-sync` skill at
-   `~/.claude/skills/artefact-sync/`, a stdlib-only Python CLI that syncs approved files from
-   `~/Downloads/Artefacts` into the public `artefacts/` tree, regenerates the catalogue between the
-   `ARTEFACTS:START` / `ARTEFACTS:END` markers in `artefacts/index.html`, and publishes. The tool
-   lives outside this repository; `artefacts/manifest.json` and `artefacts/page-template.html` live
-   in it.
-
-```bash
-python3 -m artefact_sync plan        # read-only: what would change, and every URL
-python3 -m artefact_sync sync        # apply locally, commit nothing
-python3 -m artefact_sync validate    # offline checks over the published tree
-python3 -m artefact_sync publish     # apply, commit, push, wait for Pages, verify every URL
-```
-
-After any sync that **adds or removes a published image**, repack the 3D showcase atlas by hand and
-commit the result:
-
-```bash
-python3 scripts/build_showcase_atlas.py
-git status --short artefacts/showcase/
-```
-
-Nothing runs this for you. It needs `ffmpeg` and `ffprobe` on `PATH`, and its JPEG output is
-encoder-dependent, so a CI staleness check would fail on byte differences rather than on real
-staleness. Text-only and manifest-only syncs leave the atlas correct: panel order follows the
-catalogue's section, collection and entry order, which a text change does not move.
-````
-
-In `README.md`, replace `python3 scripts/artefacts.py plan` with `python3 -m artefact_sync plan` and
-`python3 scripts/artefacts.py publish` with `python3 -m artefact_sync publish`.
-
-- [ ] **Step 5: Check nothing else references the deleted script**
-
-```bash
-grep -rn 'scripts/artefacts\.py\|tests/test_artefacts\.py' "$SITE" \
-  --include='*.md' --include='*.yml' --include='*.html' --include='*.py' \
-  | grep -v '^.*/docs/specs/'
-```
-
-Expected: no output. Matches under `docs/specs/` are that repository's copies of these
-specifications, which describe the prior art on purpose; leave them.
-
-- [ ] **Step 6: Commit, push, and merge**
-
-```bash
-git -C "$SITE" add -A
-git -C "$SITE" commit -m "chore: retire scripts/artefacts.py for the artefact-sync skill"
-git -C "$SITE" push -u origin retire-artefacts-script
-gh pr create --repo kevinlin/kevinlin.github.io --fill
-```
-
-Wait for the workflow to pass, merge the pull request, then:
-
-```bash
-git -C "$SITE" switch main
-git -C "$SITE" pull --ff-only origin main
-git -C "$SITE" status --short          # must print nothing
-```
-
-Do not run Task 8 until this prints nothing on `main`. `publish` refuses a working tree with changes
-outside `artefacts/`, and it refuses a `main` that has diverged from `origin/main`.
-
----
-
-### Task 8: the live cutover
+### Task 8: the live probe — publish, verify, and exercise what the prior art cannot
 
 **Files:**
-- Modify (in the site repository): `artefacts/manifest.json`, add `artefacts/page-template.html`
-- Modify: `docs/specs/m4-acceptance.md` (rows 7 onwards, and the result)
+- Modify: `docs/specs/m4-acceptance.md` (the remaining rows, and the result)
 - Modify: `docs/specs/plan_artefact-sync-m4.md` (status line, deviations)
+- Adds to `~/Downloads/Claude-Artefacts`: `flow.svg` and `brief.pdf`, plus one temporary
+  `dirty.svg` removed in the same step
 
 **Interfaces:**
-- Consumes: everything. Produces the release.
+- Consumes: everything. Produces the release evidence.
 
-This is the irreversible one. 56 live URLs are at stake, and search engines have all of them cached.
-Task 6 is the rehearsal; if Task 6 did not produce exactly its expected output, do not run this task.
+This publishes to the internet, on a repository created for the purpose. Nothing here is at risk
+beyond the probe. Do not run it until Task 7 produced exactly its expected output.
 
-- [ ] **Step 1: Install the skill and point it at the site**
+- [ ] **Step 1: Install the skill and create the probe repository**
 
 ```bash
 git -C /Users/keli/dev/ai-practitioner/artefact-sync status --short   # must print nothing
@@ -1540,132 +1509,168 @@ ln -s /Users/keli/dev/ai-practitioner/artefact-sync ~/.claude/skills/artefact-sy
 ls ~/.claude/skills/artefact-sync/SKILL.md
 ```
 
-A symlink rather than a clone, so the release gate tests the code that is about to be tagged rather
-than a copy of it. Distribution by `git clone` is unchanged for everyone else.
-
-Then write the prep into the live repository, using the same script as Task 6 Step 2 with the clone
-path replaced by `/Users/keli/dev/github-kevinlin/kevinlin.github.io` and no pointer file — the
-pointer goes to its real home:
+A symlink rather than a clone, so the gate tests the code about to be tagged rather than a copy of
+it. Distribution by `git clone` is unchanged for everyone else.
 
 ```bash
-cd /Users/keli/dev/ai-practitioner/artefact-sync
+PROBE=~/dev/github-kevinlin/artefacts-test
+gh repo create kevinlin/artefacts-test --public --source "$PROBE" --remote origin --push
+```
+
+Then enable Pages in the repository settings: Settings, Pages, source `Deploy from a branch`, branch
+`main`, folder `/ (root)`. Wait for the first build, then confirm the URL the skill will use:
+
+```bash
 python3 -m artefact_sync init \
-  --repo /Users/keli/dev/github-kevinlin/kevinlin.github.io \
-  --source ~/Downloads/Artefacts
+  --repo ~/dev/github-kevinlin/artefacts-test \
+  --source ~/Downloads/Claude-Artefacts
 ```
 
-`init` is safe here: it creates nothing that exists. `artefacts/manifest.json` and
-`artefacts/vendor/marked.min.js` are already present, so it skips both, writes the pointer, and
-fetches `site.base_url` once. Then run the Task 6 Step 2 prep script against the live path.
+Expected: `pointer written to ~/.config/artefact-sync/config.json`, `seeded .../artefacts`, and
+`verified https://kevinlin.github.io/artefacts-test/artefacts/`. `init` creates nothing that already
+exists, so the manifest, the template and the vendored JS are all left alone. A 404 means Pages has
+not finished its first build; wait and re-run. A URL missing the `artefacts-test` segment means
+`base_url` in the manifest is wrong — fix the manifest, not the code.
 
-Expected from `init`: `pointer written to ~/.config/artefact-sync/config.json`, `seeded .../artefacts`,
-and `verified https://kevinlin.github.io/artefacts/`. A 404 there means `base_url` is wrong: fix it
-before going further.
-
-- [ ] **Step 2: Plan against the live tree, then publish on a branch**
-
-```bash
-python3 -m artefact_sync plan | grep -E '^[A-Z][A-Z ]*\([0-9]+\)|^  https'
-```
-
-Expected: `CHANGED (2)` — `manifest.json` and
-`https://kevinlin.github.io/artefacts/agent-harness/20260713-loop-engineering-raw/`, the second being
-the CRLF page from Task 6 Step 6. Nothing else, and no `NEW PUBLIC URLS`, `WILL START 404-ING` or
-`BLOCKED`.
-
-Then set branch mode and publish, so the change lands as a reviewable diff rather than straight onto
-`main`:
-
-```bash
-python3 - <<'PY'
-import json
-from pathlib import Path
-path = Path.home() / ".config" / "artefact-sync" / "config.json"
-body = json.loads(path.read_text(encoding="utf-8"))
-body["push"] = "branch"
-path.write_text(json.dumps(body, indent=2) + "\n", encoding="utf-8")
-print(body)
-PY
-python3 -m artefact_sync publish
-```
-
-Expected: the irreversibility confirmation lists no new URLs, the branch
-`artefact-sync/<timestamp>` is pushed, a `compare/main...` URL is printed, and no build wait or URL
-verification runs. `origin/main` has not moved.
-
-- [ ] **Step 3: Review the diff by eye, then merge**
-
-Open the printed compare URL and check the whole diff against Task 6:
-
-- `artefacts/manifest.json`: 56 `date` fields, the `site` block, `".*"`, `section_links`, one em dash.
-- `artefacts/page-template.html`: added.
-- `artefacts/agent-harness/20260713-loop-engineering-raw/index.html`: **absent from the diff**. Git
-  had already normalised its CRs, so the LF page `sync` wrote matches the committed blob.
-- Nothing else. If any other published file appears, close the pull request without merging and go
-  back to Task 6.
-
-Merge it, then return to direct mode on an up-to-date `main`:
-
-```bash
-SITE=/Users/keli/dev/github-kevinlin/kevinlin.github.io
-git -C "$SITE" switch main
-git -C "$SITE" pull --ff-only origin main
-python3 - <<'PY'
-import json
-from pathlib import Path
-path = Path.home() / ".config" / "artefact-sync" / "config.json"
-body = json.loads(path.read_text(encoding="utf-8"))
-body["push"] = "direct"
-path.write_text(json.dumps(body, indent=2) + "\n", encoding="utf-8")
-PY
-```
-
-- [ ] **Step 4: Verify every published URL**
+- [ ] **Step 2: Publish, and verify every URL**
 
 ```bash
 time python3 -m artefact_sync publish
 ```
 
-Expected: `no changes.` then `nothing to publish; 94 published URLs verified.` — the base URL,
-`index.html`, 56 entries and 36 protected files. No new commit. Record the wall-clock time: 94
-sequential fetches is roughly fifteen times M2's six, and a run past a few minutes is worth knowing
-about before anyone adds another hundred entries.
+Expected: nothing left to apply after Task 7, so this reaches `nothing to publish; 10 published URLs
+verified.` — the base URL, `index.html`, 6 entries and 2 protected files. If Task 7's commit has not
+been pushed yet, `publish` pushes it, waits for the Pages build and then verifies. Record the
+wall-clock time against M2's 39 seconds for 6 URLs.
 
-- [ ] **Step 5: Check the site in a browser**
+- [ ] **Step 3: Check the probe in a browser**
 
-Open `https://kevinlin.github.io/artefacts/` and confirm:
+Open `https://kevinlin.github.io/artefacts-test/artefacts/` and confirm:
 
-- The catalogue looks exactly as it did. Card order, "Updated" dates, and the "Walk the image
-  artefacts in 3D" link on the Image collections heading are all present.
-- That link opens `showcase/` and the 3D gallery still renders — the atlas was not touched, and this
-  is the check that proves the `section_links` hook did its job.
-- One Markdown page renders through `marked.js` with no console errors. Use
-  `agent-harness/20260713-loop-engineering-raw/`, the CRLF one, and confirm its Cyrillic block still
-  reads correctly.
-- Two images and the PDF-free byte-copy formats still load.
+- The catalogue renders with the host page's own CSS: cards in a grid, `Updated` dates present.
+  That is Task 3's markup fitting a stylesheet it never saw.
+- `showcase/index.html` still serves its hand-written text, untouched.
+- `star-wars-timeline/` and `coding-agent-adoption/` render, and their literal `</script>` text, em
+  dashes and entities all survived `transform_html`.
+- One Markdown page — `mingpt-vs-toy-transformer/analysis/` — renders through `marked.js` with no
+  console messages. This is the page the `$prefix$vendor` fix exists for: at depth 2 it loads
+  `../../vendor/marked.min.js`, and a blank page here means Task 1 regressed.
+- `mingpt-vs-toy-transformer/infographic.png` loads at full size.
 
-- [ ] **Step 6: Prove nothing published moved, over the whole cutover**
+- [ ] **Step 4: Compare served bytes against source bytes**
+
+M2 did this by hand for two files, and the design records the gap it closes: nothing in `publish`
+proves the bytes GitHub serves equal the bytes pushed.
 
 ```bash
-SITE=/Users/keli/dev/github-kevinlin/kevinlin.github.io
-git -C "$SITE" diff --stat 280b17e..HEAD -- artefacts
+python3 - <<'PY'
+import hashlib, json, urllib.request
+from pathlib import Path
+base = "https://kevinlin.github.io/artefacts-test/artefacts/"
+source = Path.home() / "Downloads/Claude-Artefacts"
+manifest = json.loads(
+    (Path.home() / "dev/github-kevinlin/artefacts-test/artefacts/manifest.json")
+    .read_text(encoding="utf-8")
+)
+for entry in manifest["entries"]:
+    if Path(entry["source"]).suffix.lower() not in {".png", ".jpeg", ".jpg"}:
+        continue
+    served = urllib.request.urlopen(base + entry["destination"], timeout=30).read()
+    local = (source / entry["source"]).read_bytes()
+    mark = "same" if hashlib.sha256(served).digest() == hashlib.sha256(local).digest() else "DIFFER"
+    print(f"{mark}  {entry['destination']}  {len(served):,} bytes")
+PY
 ```
 
-Expected: `artefacts/manifest.json` and `artefacts/page-template.html`, and nothing else. Replace
-`280b17e` with whatever HEAD was before Task 7 if the site moved on. This one command is the release
-gate's whole claim, and it should be the last line of the acceptance record.
+Expected: `same` for `mingpt-vs-toy-transformer/infographic.png`, 2,130,205 bytes. A 2 MB image
+round-tripping intact through push and Pages is worth having on the record.
+
+- [ ] **Step 5: Publish what the prior art never could**
+
+The gate proves fidelity on the surface both implementations share. The skill's own additions —
+`.svg`, `.pdf`, `.webp`, `.gif`, and the SVG validator — have no prior-art counterpart, so they come
+after the green run, exactly as the design says intentional changes should. These two files are added
+to a real folder; both are named here and can be deleted afterwards.
+
+```bash
+cat > ~/Downloads/Claude-Artefacts/flow.svg <<'EOF'
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 40">
+  <rect width="100" height="40" fill="#eee"/>
+  <text x="50" y="24" text-anchor="middle" font-size="10">flow</text>
+</svg>
+EOF
+printf '%%PDF-1.4\n1 0 obj<</Type/Catalog>>endobj\ntrailer<</Root 1 0 R>>\n%%%%EOF\n' \
+  > ~/Downloads/Claude-Artefacts/brief.pdf
+python3 -m artefact_sync plan | grep -E '^[A-Z][A-Z ]*\([0-9]+\)|^  '
+```
+
+Expected: exit 3, `BLOCKED (2)` naming both files as `approved source has no manifest entry;
+proposal generated`, and `NEW PUBLIC URLS (2)` with their sizes. A closed allowlist stopping to ask
+about two files the user just added is correct behaviour, and it is the two-step flow M3 built: the
+first run proposes, the second publishes.
+
+Review the proposed entries, then publish them:
+
+```bash
+python3 -m artefact_sync publish
+```
+
+Expected: the confirmation names both new URLs and the irreversibility, then 12 URLs verified. Open
+`flow.svg` in a browser and confirm it renders.
+
+Then prove the SVG gate rejects rather than rewrites:
+
+```bash
+cat > ~/Downloads/Claude-Artefacts/dirty.svg <<'EOF'
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10">
+  <script>alert(1)</script>
+</svg>
+EOF
+python3 -m artefact_sync plan | grep -A3 '^BLOCKED'
+rm ~/Downloads/Claude-Artefacts/dirty.svg
+```
+
+Expected: `BLOCKED` naming `dirty.svg:2` and `script element`, exit 3, and nothing written.
+
+- [ ] **Step 6: Exercise a deletion and reconverge**
+
+Delete a file the skill added in Step 5 rather than anything that was in the folder to begin with:
+
+```bash
+rm ~/Downloads/Claude-Artefacts/brief.pdf
+python3 -m artefact_sync publish
+```
+
+Expected: the confirmation says exactly one URL will start returning 404; after the build that URL
+404s, the others still serve, and the catalogue dropped its link. No orphan warning names the file
+being deleted — that is M3's fix holding on a live run.
+
+Then confirm a re-run is a no-op:
+
+```bash
+python3 -m artefact_sync publish
+```
+
+Expected: `no changes.` and `nothing to publish; 11 published URLs verified.`
 
 - [ ] **Step 7: Finish the record and commit**
 
-Fill in rows 7 onwards of `docs/specs/m4-acceptance.md` from Steps 1-6, write its "What the run
+Fill in the remaining rows of `docs/specs/m4-acceptance.md` from Steps 1-6, write its "What the run
 found" and "Result" sections, set this plan's status line, and fill in "Deviations from this plan"
-with every place the plan was wrong, corrected test counts included. Then:
+with every place the plan was wrong, corrected test counts included. Record in a "Teardown" section
+what was left behind: whether `flow.svg` stayed in `~/Downloads/Claude-Artefacts`, and whether the
+probe repository was kept. Keeping the repository is worth more than deleting it, because the next
+milestone gets a live target for free; if it is deleted, `gh repo delete` needs an interactive
+`gh auth refresh -h github.com -s delete_repo` first, as M2 found.
 
 ```bash
 cd /Users/keli/dev/ai-practitioner/artefact-sync
 git add docs/specs/m4-acceptance.md docs/specs/plan_artefact-sync-m4.md
-git commit -m "docs: record the M4 release gate against 56 live URLs"
+git commit -m "docs: record the M4 release gate on the artefacts-test probe"
+git -C /Users/keli/dev/github-kevinlin/kevinlin.github.io status --short
 ```
+
+Expected: the last command prints nothing, for the last time.
 
 ---
 
@@ -1675,94 +1680,101 @@ git commit -m "docs: record the M4 release gate against 56 live URLs"
 |---|---|
 | `artefact_sync/render.py` | `normalise_source_text`, `BLOCK_START` gains the prior art's id and newline, `$vendor` loses the baked-in prefix |
 | `artefact_sync/apply.py` | Round-trip verification normalises the source the same way the renderer does |
-| `artefact_sync/catalogue.py` | Prior-art markup, `section_slug`, cards by date and entries by order, `section_links` |
-| `artefact_sync/config.py` | `Site.section_links`, read and re-emitted |
+| `artefact_sync/catalogue.py` | Prior-art markup, `section_slug`, cards by date and entries by order |
 | `artefact_sync/manifest.py` | `head_manifest` tolerates a HEAD manifest predating the `site` block |
 | `artefact_sync/assets/page-template.html` | `src="$prefix$vendor"`, `markdown-source`, leading-newline strip |
 | `artefact_sync/assets/catalogue-template.html` | CSS matches the new fragment markup |
-| `SKILL.md` | `section_links`, and "Adopting an existing artefacts tree" |
-| `docs/specs/m4-acceptance.md` | The dry run and the live cutover |
-| `kevinlin.github.io` | `scripts/artefacts.py` and its tests deleted, workflow rewritten, atlas rehomed into the docs, `site` block and template added |
+| `SKILL.md` | "Adopting an existing artefacts tree" |
+| `docs/specs/m4-acceptance.md` | The fidelity gate and the live probe publish |
 
 ---
 
 ## Warnings
 
-- **Task 8 is irreversible.** 56 URLs are cached by search engines. Task 6 is the rehearsal that
-  makes Task 8 safe, so run it first.
-- **Do not "fix" a published page to make a diff go away.** Every one of the four code fixes exists
-  because the tool was rendering something differently from what was published. If a fifth
-  difference appears, find out which side is wrong before changing either.
-- **Do not add an `ignored_sources` rule to silence a blocked file** without reading the file. The
-  `.*` rule is right because the prior art skipped dotfile directories all along. A genuinely new
-  artefact belongs in the manifest.
-- **The 40-hex secret rule warns on git SHAs.** Eight warnings on the live tree are all false
-  positives. Read them anyway; that is what a warning is for.
-- **`section_links` HTML is inserted verbatim.** It is the user's own manifest, at the same trust
-  level as `favicon`, and it is escaped by nobody.
-- **The atlas is nobody's automatic job after M4.** The migration itself changes zero images, so
-  nothing goes stale on day one. The next published image needs a hand-run.
+- **The profile repository is read-only for the whole milestone.** No branch, no commit, no edit to
+  `scripts/artefacts.py` or `validate-artefacts.yml`. Task 6 copies the script out and runs the copy
+  with `python3 -B`. Check `git -C /Users/keli/dev/github-kevinlin/kevinlin.github.io status
+  --short` after every task.
+- **`~/Downloads/Claude-Artefacts` is a real folder.** Tasks 6 and 7 read it. Task 8 adds `flow.svg`
+  and `brief.pdf` and removes a temporary `dirty.svg`. Nothing else in it is touched, and the
+  inventory in Task 6 Step 1 is what proves that afterwards.
+- **Task 6 Step 3 must run before the skill ever touches the probe.** The gate is only worth
+  anything if the prior art wrote the baseline. If the skill publishes first, the comparison is the
+  skill against itself and proves nothing.
+- **Do not "fix" a published page to make a diff go away.** All four code fixes exist because the
+  tool rendered something differently from what was published. If a fifth difference appears, find
+  out which side is wrong before changing either.
+- **Use `git diff HEAD`, never `git status`, for every claim about what moved.** With
+  `core.autocrlf = input`, status can report a working-tree line-ending change whose commit diff is
+  empty.
+- **Do not shorten an `ignored_sources` rule during adoption.** A bare `dir/` rule matches at any
+  depth in the skill and only at the root in the prior art, so shortening one silently drops files
+  that were being published. M4-i.
 
 ---
 
 ## Self-Review
 
-**Spec coverage.** Walked the design's M4 paragraph and every section the migration touches.
+**Spec coverage.** Walked the design's M4 paragraph and every section the gate touches.
 
 | Spec item | Task |
 |---|---|
-| "Copy the site's existing template verbatim into `page-template.html`" | 6 Step 2, with the conversion proven by the 9 Markdown pages coming out byte-identical |
-| "Seed `date` from current mtimes" | Already built: `plan._stamp_missing_dates` runs inside `create_sync_plan`. Verified in 6 Step 4 as 56 date lines |
+| "Copy the existing template verbatim into `page-template.html`" | 7 Step 1, with the conversion proven by every Markdown page coming out byte-identical |
+| "Seed `date` from current mtimes" | Already built: `plan._stamp_missing_dates` runs inside `create_sync_plan`. Verified in 7 Step 4 as 6 date lines |
 | "Install the skill" | 8 Step 1 |
-| "Run `plan` against the live tree, and require zero changes" | 6 Step 3 (clone: one change, `manifest.json`), 8 Step 2 (live tree: two, the second explained by `core.autocrlf`). Restated as the measurable claim in 8 Step 6 |
-| "An empty plan across the real entries proves the extraction preserved behaviour" | 6 Step 5 and 8 Step 6 both prove it as a git diff over the published tree, which is stronger: it covers protected files and the catalogue, which no plan group reports |
+| "Run `plan` against the live tree, and require zero changes" | 7 Step 2. One change, `manifest.json`, and it is the stamped dates |
+| "An empty plan across real entries proves the extraction preserved behaviour" | 7 Step 3 proves it as a staged git diff, which is stronger than a plan group: it covers protected files and the injected catalogue, which no plan group reports. 7 Step 5 adds convergence |
 | "Drift in escaping, catalogue rendering, ordering or transformation all show up as a non-empty plan" | Found four such drifts. Escaping: Task 2. Catalogue rendering and ordering: Task 3. Transformation: Task 1 |
-| "Migration also has to rehome the atlas" | 7 Step 4, as a documented manual step (M4-h) |
-| "`kevinlin.github.io` keeps its own copy ... the two will drift" — reversed by D1 | 7 Step 2 deletes the copy |
-| D5: `init` writes `vendor/marked.min.js` and `page-template.html` into the repo | 8 Step 1. Both already exist or are written by the prep, and `init` skips what is present |
+| "M2: the disposable Pages repo is the provider seam's only real test" | 8 extends that to 12 URLs, a deletion, a rejected SVG, and a 2 MB served-bytes comparison |
+| D5: `init` writes `vendor/marked.min.js` and `page-template.html` into the repo | 8 Step 1. Both already exist, so `init` skips them |
 | Invariant 1: an existing entry is never re-titled or re-slugged | Enforced throughout, and Task 4 is what keeps it enforced during adoption rather than silently disabled |
-| Invariant 2: `destination` is frozen once published | Same. 6 Step 5 proves no destination moved |
-| Invariant 4: orphans are never deleted | 6 Step 3: zero orphan warnings, because every file in the published tree is an entry, a protected file, a reserved name, or an untracked `.DS_Store` that `scan_published_tree` skips |
-| "Post-push URL verification is the only proof a publish worked" | 8 Step 4, 94 URLs |
-| Testing ledger: "Publish: rewrite all ... unit tests cannot close the publish gap" | 8 is that gap's second and last closure, after M2 |
+| Invariant 2: `destination` is frozen once published | Same. 7 Step 3 proves no destination moved |
+| Invariant 4: orphans are never deleted | 7 Step 2: zero orphan warnings, because every file in the probe tree is an entry, a protected file, or a reserved name. 8 Step 6 re-proves M3's fix on a live deletion |
+| Closed allowlist has three distinct outcomes | 7 Step 2's `EXCLUDED` shows the ignored outcome; 8 Step 5 shows approved-but-unlisted blocking. The unsupported-suffix outcome is not in this corpus — see the coverage table |
+| "`.svg` behind a validator: reject and name the line, never rewrite" | 8 Step 5 |
+| "Post-push URL verification is the only proof a publish worked" | 8 Steps 2, 4 and 6 |
 
 **Deliberately not done, and why.**
 
-- **No second page template and no catalogue templating engine.** The fragment's markup is now the
+- **`kevinlin.github.io` is not migrated.** Deferred by the milestone's owner. Most of what that
+  migration needs lands here; what it still needs is in "After M4", with the measurement.
+- **`site.catalogue.section_links` is not built.** M4-j. The probe corpus yields one section and no
+  showcase link, so nothing in this milestone would exercise it. It is the live migration's
+  requirement, and building it now would ship an unexercised feature.
+- **No second page template and no catalogue templating engine.** The fragment markup is now the
   prior art's, and a host page adapts by styling those class names. A fragment template would need
-  loops over sections, cards and items, which `string.Template` cannot express, so it would mean
-  shipping a small templating engine to serve one site.
-- **No CI staleness check for the atlas.** `build_showcase_atlas.py` shells out to `ffmpeg`, whose
-  JPEG output differs between builds, so the check would fail on encoder differences and be
-  disabled within a week. M4-h.
-- **`artefact-sync validate` is not run in the site's CI.** The skill is not installed on the
-  runner. The workflow keeps the one check that needs no tool: every declared file exists.
-- **The 10 collections with no entries stay in the manifest.** They render nothing and validate
-  cleanly. Deleting somebody's placeholder collections is not a migration's business.
-- **`ensure_ascii=False` stays.** It changes one manifest line on the cutover and makes every future
-  manifest readable. `manifest.json` is not a page anyone renders.
-- **No `.gitattributes` in the site repository.** Setting `artefacts/** -text` would also stop git
-  normalising and would keep bytes exact, but it fixes one repository and leaves the tool broken for
-  the next adopter whose git normalises. Task 1 fixes the tool.
+  loops over sections, cards and items, which `string.Template` cannot express.
+- **The corpus was not padded to cover more paths.** Generating files to hit CRLF, an unsupported
+  suffix and a secret shape would make the gate test the fixture rather than the tool. Those paths
+  are covered by unit tests and by `test_m4_adoption.py`, and the coverage table says which.
+- **The probe does not exercise `replacements`.** No live entry uses it either.
+- **No `.gitattributes` in the probe.** Setting `artefacts/** -text` would stop git normalising and
+  keep bytes exact, but it fixes one repository and leaves the tool broken for the next adopter
+  whose git normalises. Task 1 fixes the tool.
 - **No version bump.** The design accepts that `manifest.version` has no source of truth. M4 adds
-  one optional key inside `site.catalogue` and one optional field nobody has to set, so an old
-  manifest still loads.
+  no manifest key at all, so an old manifest still loads.
 
 **Type consistency.** `normalise_source_text(source_bytes: bytes, label: str) -> str` has one
 signature across its definition in `render.py` and its three callers (`render_markdown_page`,
 `transform_html`, `apply.verify_markdown_round_trip`). `render_catalogue(manifest, site)` keeps the
 signature `catalogue.render_standalone_catalogue`, `plan.create_sync_plan` and `validate` already
-call. `section_slug(value: str) -> str` is defined and called only inside `catalogue.py`.
-`Site.section_links` is a `dict` with a `field(default_factory=dict)`, read in `site_from_dict`,
-written in `site_to_dict`, and consumed in `render_catalogue`; every positional four-argument
-`Site(...)` construction in `selfcheck.py` and the tests keeps working. `catalogue.entry_sort_key`
-and `catalogue._invert` are deleted, and `tests/test_catalogue.py::SortTests` — their only caller —
-is deleted with them. `head_manifest(repo_root) -> Manifest | None` is unchanged in signature, so
-`cli._command_state` and every publish path are untouched. `BLOCK_START` and `BLOCK_END` keep their
-names; only `BLOCK_START`'s value moves.
+call, and still takes `site` even though it no longer reads a field off it — changing the signature
+would touch three callers for nothing. `section_slug(value: str) -> str` is defined and called only
+inside `catalogue.py`. `catalogue.entry_sort_key` and `catalogue._invert` are deleted, and
+`tests/test_catalogue.py::SortTests` — their only caller — goes with them.
+`head_manifest(repo_root) -> Manifest | None` is unchanged in signature, so `cli._command_state` and
+every publish path are untouched. `BLOCK_START` and `BLOCK_END` keep their names; only
+`BLOCK_START`'s value moves. `config.Site` is untouched, so every positional construction in
+`selfcheck.py` and the tests keeps working.
 
-**Predicted counts.** 227 at the start, then 231, 232, 244, 246, 250. Every one is a prediction; see
-the last global constraint. Tasks 6, 7 and 8 add no tests.
+**Predicted counts.** 227 at the start, then 232, 233, 240, 242, 246. Tasks 6, 7 and 8 add no tests.
+Every number is a prediction; see the last global constraint.
+
+**Known test churn.** Four existing tests fail once Tasks 1-3 land, and each is rewritten by the
+task that breaks it: `test_catalogue.SortTests` (2, Task 3, `entry_sort_key` deleted) and
+`test_render_markdown.TemplateTests::test_the_renderer_reads_the_embedded_source_block_id` and
+`::test_the_browser_does_not_strip_a_leading_source_newline` (2, Task 2). No other test in the suite
+changes behaviour. If a fifth breaks, that is a finding.
 
 ---
 
@@ -1775,16 +1787,19 @@ _To be filled in during implementation._
 
 ## After M4
 
-M4 is the last milestone in the design's ladder. What the gate leaves open, in the order it will
-matter:
-
-- **`manifest.version` still has no source of truth.** M4 added `site.catalogue.section_links` and
-  changed `BLOCK_START`, and neither carries a migration signal. The next adopter of a pre-M4 tree
-  gets no warning that the block id moved; they will find out from a non-empty plan, which is how
-  M4 found everything.
-- **Nothing verifies that the bytes GitHub serves equal the bytes pushed.** `publish` checks status
-  codes. M2 hand-compared sha256 for two files, and M4 found a real case where git changed the bytes
-  between apply and publish. A byte comparison in `publish` for the text formats is the obvious next
-  guard.
-- **The atlas is a manual step.** If a published image is added and the atlas is not repacked, the
-  3D showcase shows a stale panel set with no warning anywhere.
+- **Migrating `kevinlin.github.io` is available and measured.** The same procedure Task 7 runs
+  against the probe was run read-only against the live tree while this plan was written, with the
+  four fixes plus a `section_links` hook applied to a scratch copy: all 56 published entry blobs and
+  `artefacts/index.html` came out byte-identical, and a commit would carry only
+  `artefacts/manifest.json` and `artefacts/page-template.html`. That migration needs two things this
+  milestone does not build. First, `site.catalogue.section_links` (M4-j), because the prior art
+  injects a 3D showcase link into the `Image collections` heading and regenerating that heading
+  deletes it. Second, a home for `build_showcase_atlas.py`, which fires from the prior art's `apply`
+  and is not ported, so it has to become a documented manual step before the first sync that adds or
+  removes a published image.
+- **`manifest.version` still has no source of truth.** M4 changed `BLOCK_START`, and that carries no
+  migration signal. Someone adopting a pre-M4 tree gets no warning that the block id moved; they find
+  out from a non-empty plan, which is how M4 found everything.
+- **`publish` still checks status codes, not bytes.** Task 8 Step 4 compares served bytes against
+  source bytes by hand for the byte-copy formats. Folding that into `publish` is the obvious next
+  guard, and M4 found a real case where git changed the bytes between apply and push.
