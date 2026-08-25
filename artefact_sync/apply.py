@@ -8,7 +8,7 @@ from .config import Context
 from .errors import ValidationError
 from .manifest import resolve_within
 from .plan import DELETION_KINDS, WRITE_KINDS, SyncPlan
-from .render import extract_markdown
+from .render import extract_markdown, normalise_source_text
 
 
 def _destination_path(root: Path, destination: PurePosixPath) -> Path:
@@ -48,12 +48,10 @@ def write_atomic(target: Path, data: bytes) -> None:
 
 def verify_markdown_round_trip(source_bytes: bytes, rendered: bytes, label: str) -> None:
     try:
-        expected = source_bytes.decode("utf-8")
+        expected = normalise_source_text(source_bytes, label)
         document = rendered.decode("utf-8")
     except UnicodeDecodeError as error:
         raise ValidationError(f"{label}: markdown round trip is not UTF-8 ({error})") from error
-    if not expected.endswith("\n"):
-        expected += "\n"
     found = extract_markdown(document)
     if found is None:
         raise ValidationError(f"{label}: rendered page carries no markdown block")

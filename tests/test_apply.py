@@ -30,6 +30,24 @@ class RoundTripVerificationTests(unittest.TestCase):
         )
         self.assertIsNone(a.verify_markdown_round_trip(b"# x\n", rendered, "a.md"))
 
+    def test_a_crlf_source_still_verifies_against_the_lf_page(self) -> None:
+        from artefact_sync import render
+
+        entry = Entry(
+            id="e", source=PurePosixPath("a.md"),
+            destination=PurePosixPath("a/index.html"), title="A",
+            collection="c", order=10, replacements={},
+        )
+        template = string.Template("<html>$block_start$markdown$block_end</html>")
+        rendered = render.render_markdown_page(
+            entry,
+            b"# x\r\n",
+            PurePosixPath("vendor/marked.min.js"),
+            site_from_dict({"base_url": "https://x.example/artefacts/"}),
+            template,
+        )
+        self.assertIsNone(a.verify_markdown_round_trip(b"# x\r\n", rendered, "a.md"))
+
     def test_raises_when_the_page_carries_different_markdown(self) -> None:
         rendered = b'<script type="text/markdown" id="artefact-source"># DIFFERENT\n</script>'
         with self.assertRaises(ValidationError):

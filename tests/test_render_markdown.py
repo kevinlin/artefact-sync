@@ -55,6 +55,22 @@ class RoundTripTests(unittest.TestCase):
                 ENTRY, b"\xff\xfe", PurePosixPath("vendor/marked.min.js"), SITE, TEMPLATE
             )
 
+    def test_crlf_line_endings_normalise_to_lf(self) -> None:
+        # Git with core.autocrlf=input stores LF for a CRLF working file, so a page that
+        # keeps CRs is not the page that gets published. See M4-b.
+        page = render.render_markdown_page(
+            ENTRY, b"# Title\r\n\r\nBody\r\n", PurePosixPath("vendor/marked.min.js"),
+            SITE, TEMPLATE,
+        )
+        self.assertNotIn(b"\r", page)
+        self.assertEqual("# Title\n\nBody\n", render.extract_markdown(page.decode("utf-8")))
+
+    def test_a_lone_carriage_return_normalises_to_lf(self) -> None:
+        page = render.render_markdown_page(
+            ENTRY, b"# Title\rBody\r", PurePosixPath("vendor/marked.min.js"), SITE, TEMPLATE
+        )
+        self.assertEqual("# Title\nBody\n", render.extract_markdown(page.decode("utf-8")))
+
     def test_rendering_is_deterministic(self) -> None:
         args = (ENTRY, b"# x\n", PurePosixPath("vendor/marked.min.js"), SITE, TEMPLATE)
         self.assertEqual(
@@ -81,11 +97,19 @@ class TemplateTests(unittest.TestCase):
         self.assertNotIn("$vendor", page)
         self.assertIn("A note", page)
 
-    def test_the_vendor_path_is_relative_to_the_destination_depth(self) -> None:
+    def test_the_shipped_template_climbs_to_the_vendor_file(self) -> None:
         page = render.render_markdown_page(
             ENTRY, b"# x\n", PurePosixPath("vendor/marked.min.js"), SITE, TEMPLATE
         ).decode("utf-8")
         self.assertIn('<script src="../../vendor/marked.min.js"></script>', page)
+
+    def test_prefix_and_vendor_are_separate_placeholders(self) -> None:
+        # A template using both, as the design documents and the prior art's does.
+        template = string.Template("$prefix|$vendor|$block_start$markdown$block_end")
+        page = render.render_markdown_page(
+            ENTRY, b"# x\n", PurePosixPath("vendor/marked.min.js"), SITE, template
+        ).decode("utf-8")
+        self.assertTrue(page.startswith("../../|vendor/marked.min.js|"), page[:60])
 
     def test_the_renderer_reads_the_embedded_source_block_id(self) -> None:
         page = render.render_markdown_page(

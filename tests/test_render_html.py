@@ -31,6 +31,11 @@ class TransformTests(unittest.TestCase):
         with self.assertRaises(TransformationError):
             render.transform_html(b"<html></html>", entry(replacements={"absent": "x"}), SITE)
 
+    def test_crlf_line_endings_normalise_to_lf(self) -> None:
+        out = render.transform_html(b"<html><head></head><body>x</body></html>\r\n", entry(), SITE)
+        self.assertNotIn(b"\r", out)
+        self.assertTrue(out.endswith(b"\n"))
+
     def test_inserts_the_site_favicon_when_the_page_has_none(self) -> None:
         out = render.transform_html(b"<html><head></head><body></body></html>", entry(), SITE)
         self.assertIn(SITE.favicon.encode("utf-8"), out)

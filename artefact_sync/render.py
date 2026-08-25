@@ -20,6 +20,23 @@ TRAILING_SPACE = re.compile(r"[ \t]+(?=\r?$)", re.MULTILINE)
 _REFERENCE = re.compile(r"""\b(?:src|href)\s*=\s*["']([^"']+)["']""", re.I)
 
 
+def normalise_source_text(source_bytes: bytes, label: str) -> str:
+    """Decode, normalise line endings, and guarantee a final newline.
+
+    Line endings are normalised because git with `core.autocrlf=input` - a common
+    default - stores LF for a CRLF working-tree file, so a page keeping its CRs is
+    not the page that gets published, and a fresh clone never converges.
+    """
+    try:
+        text = source_bytes.decode("utf-8")
+    except UnicodeDecodeError as error:
+        raise TransformationError(f"{label}: not valid UTF-8 ({error})") from error
+    text = text.replace("\r\n", "\n").replace("\r", "\n")
+    if text and not text.endswith("\n"):
+        text += "\n"
+    return text
+
+
 def escape_markdown_block(text: str) -> str:
     return MARKDOWN_MARKER.sub(
         lambda match: "<" + "\\" * (len(match.group(1)) + 1) + match.group(2), text
@@ -68,18 +85,13 @@ def render_markdown_page(
     site: Site,
     template: string.Template,
 ) -> bytes:
-    try:
-        text = source_bytes.decode("utf-8")
-    except UnicodeDecodeError as error:
-        raise TransformationError(f"{entry.source}: not valid UTF-8 ({error})") from error
-    if not text.endswith("\n"):
-        text += "\n"
+    text = normalise_source_text(source_bytes, entry.source.as_posix())
     prefix = "../" * len(entry.destination.parent.parts)
     document = template.substitute(
         title=html.escape(entry.title),
         favicon=site.favicon,
         prefix=prefix,
-        vendor=prefix + vendor_path.as_posix(),
+        vendor=vendor_path.as_posix(),
         markdown=escape_markdown_block(text),
         block_start=BLOCK_START,
         block_end=BLOCK_END,
@@ -125,10 +137,7 @@ def ensure_favicon(text: str, favicon: str) -> str:
 
 
 def transform_html(source_bytes: bytes, entry: Entry, site: Site) -> bytes:
-    try:
-        text = source_bytes.decode("utf-8")
-    except UnicodeDecodeError as error:
-        raise TransformationError(f"{entry.source}: not valid UTF-8 ({error})") from error
+    text = normalise_source_text(source_bytes, entry.source.as_posix())
     for old, new in entry.replacements.items():
         parts = text.split(old)
         if len(parts) == 1:
@@ -136,8 +145,6 @@ def transform_html(source_bytes: bytes, entry: Entry, site: Site) -> bytes:
         text = new.join(parts)
     text = TRAILING_SPACE.sub("", text)
     text = ensure_favicon(text, site.favicon)
-    if text and not text.endswith(("\n", "\r")):
-        text += "\n"
     return text.encode("utf-8")
 
 
