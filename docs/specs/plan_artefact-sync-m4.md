@@ -1783,7 +1783,31 @@ changes behaviour. If a fifth breaks, that is a finding.
 Recorded because the plan was written before the code existed, and a plan that hides where it was
 wrong is worth less on the next milestone.
 
-_To be filled in during implementation._
+**Status: implemented and accepted, 2026-08-25.** All eight tasks ran. The suite is 246 tests,
+passing on both `python3` (3.13) and `/usr/bin/python3` (3.9.6). Evidence is
+[m4-acceptance.md](m4-acceptance.md), 25 rows, none failed.
+
+**Every predicted test count was right.** 227 at the start, then 232, 233, 240, 242, 246: the
+figures in "Predicted counts", unaltered, with no test renamed or merged to reach them. So was every
+predicted failure message, including Task 4's two `ValidationError` texts verbatim.
+
+Six places the plan was wrong. None changed the design, and none needed a code change.
+
+| # | Plan said | What happened |
+|---|---|---|
+| 1 | Task 3 Step 2: "every new `MarkupTests`, `CardOrderTests` and `EntryOrderTests` case fails" | Seven of ten failed. `test_an_undated_card_says_nothing_about_dates`, `test_titles_are_escaped` and `test_cards_sharing_a_date_keep_their_declared_order` passed against the old markup. The first two assert on absence, the third on an order the old code already produced by a different route. All ten pass against the new markup, which is what they are for |
+| 2 | Task 6 Step 1: "a different list is not a failure; the folder is real and may have moved on" | It had not moved. All seven files matched the recorded sizes and hashes exactly, and the live corpus figures were unchanged too, despite live HEAD advancing from `280b17e` to `4a7880d` |
+| 3 | Task 7 Step 8: correct "57 real entries" to 56 "there and in `Testing`" | The design's `Testing` section never carried the number; only the release ladder did. Corrected there. The requirement document still says 57 and was out of this milestone's scope to edit. M4-k records the count so it stops propagating |
+| 4 | Task 8 Step 1: enable Pages through Settings, Pages, by hand | Done with one `gh api repos/kevinlin/artefacts-test/pages -X POST -f 'source[branch]=main' -f 'source[path]=/'`. Same result, no UI, and it makes the step reproducible |
+| 5 | Task 8 Step 2: "Record the wall-clock time against M2's 39 seconds for 6 URLs" | 4.0 seconds for 10 URLs, but the comparison does not hold: M2's 39 seconds included a push and a Pages build wait, and this run had nothing to push. The publish that *did* push (row 21) is the comparable one |
+| 6 | Task 8 Step 5: the `dirty.svg` run leaves "nothing written" | Nothing *published* is written, which is the safety claim. The proposed `manifest.json` is written, because a blocked `plan` writing its proposal is what makes the two-step flow work; the design says so under `plan`. The expectation was wrong, not the code. Reverted with `git checkout` after removing the file |
+
+One thing the live rows found that no task predicted: `validate` reports Google Fonts references at
+lines 9-11 of every rendered Markdown page, and `plan` reports none of them. They come from the
+adopted template, not from any source file. `plan` scans sources, so it cannot see them; `validate`
+scans the published tree, so it can. Both are working as designed. It is recorded in
+the acceptance document because an adopter reading the two outputs side by side will otherwise
+assume one is broken.
 
 ## After M4
 
