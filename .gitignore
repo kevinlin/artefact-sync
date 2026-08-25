@@ -26,8 +26,5 @@ node_modules/
 .DS_Store
 Thumbs.db
 
-# Per-repo agent handoff runtime state: config, goal, jobs, receipts, handoffs, backups
-.partner/*
-!.partner/config.toml
+# Per-repo agent handoff runtime state
 .handoff/*
-!.handoff/config.toml
