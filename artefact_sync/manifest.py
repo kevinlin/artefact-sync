@@ -356,7 +356,15 @@ def load_manifest(artefacts_root: Path) -> Manifest:
 
 
 def head_manifest(repo_root: Path) -> Manifest | None:
-    """The manifest as of HEAD, or None when it was never committed."""
+    """The manifest as of HEAD, or None when it was never committed or cannot be read.
+
+    Read leniently on purpose. This value only ever feeds `check_published_invariants`,
+    which reads `id`, `destination` and `title`. A repository adopting the skill has a
+    committed manifest with no `site` block, so failing the whole run on a field the
+    check never touches would make adoption impossible - while returning None outright
+    would drop the URL-freeze guard on exactly the run where published destinations are
+    at stake. Injecting a placeholder keeps the guard.
+    """
     result = subprocess.run(
         ["git", "show", f"HEAD:artefacts/{MANIFEST_NAME}"],
         cwd=str(repo_root),
@@ -364,7 +372,16 @@ def head_manifest(repo_root: Path) -> Manifest | None:
     )
     if result.returncode != 0:
         return None
-    return manifest_from_bytes(result.stdout)
+    try:
+        payload = json.loads(result.stdout.decode("utf-8"))
+    except (UnicodeError, json.JSONDecodeError):
+        return None
+    if isinstance(payload, dict):
+        payload.setdefault("site", {"base_url": "https://head.invalid/"})
+    try:
+        return manifest_from_dict(payload)
+    except ValidationError:
+        return None
 
 
 def check_published_invariants(current: Manifest, head: Manifest | None) -> None:

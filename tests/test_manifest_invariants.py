@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import tempfile
 import unittest
 from pathlib import Path, PurePosixPath
@@ -68,4 +69,32 @@ class HeadManifestTests(unittest.TestCase):
     def test_returns_none_when_the_repo_has_no_manifest_in_head(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             repo = make_repo(Path(tmp), {"README.md": b"x\n"})
+            self.assertIsNone(m.head_manifest(repo))
+
+
+class AdoptionTests(unittest.TestCase):
+    def test_a_head_manifest_without_a_site_block_still_freezes_destinations(self) -> None:
+        # Every repository adopting the skill has one. See M4-f.
+        with tempfile.TemporaryDirectory() as tmp:
+            body = json.dumps({
+                "version": 1,
+                "protected_files": [],
+                "ignored_sources": [],
+                "collections": [{"id": "c", "title": "C", "section": "S",
+                                 "section_order": 10, "order": 10}],
+                "entries": [{"id": "e", "source": "a.md", "destination": "a/index.html",
+                             "title": "A", "collection": "c", "order": 10,
+                             "replacements": {}}],
+            }, indent=2) + "\n"
+            repo = make_repo(Path(tmp), {"artefacts/manifest.json": body.encode("utf-8")})
+            head = m.head_manifest(repo)
+            self.assertIsNotNone(head)
+            self.assertEqual(
+                ("a/index.html",),
+                tuple(e.destination.as_posix() for e in head.entries),
+            )
+
+    def test_an_unreadable_head_manifest_leaves_the_invariants_unchecked(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = make_repo(Path(tmp), {"artefacts/manifest.json": b"not json at all\n"})
             self.assertIsNone(m.head_manifest(repo))
