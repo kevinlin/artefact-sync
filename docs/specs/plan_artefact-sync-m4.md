@@ -18,7 +18,7 @@ GitHub and the network.
 
 **Spec:** [design_artefact-sync.md](design_artefact-sync.md), release ladder line "M4: release gate",
 and the "Release ladder" section's M4 paragraph. Supporting evidence with `file:line` citations into
-the prior art is [extraction-analysis.md](../research/extraction-analysis.md). The three earlier
+the prior art is [extraction-analysis.md](../history/extraction-analysis.md). The three earlier
 milestones and the deviations this plan inherits are
 [plan_artefact-sync-m1.md](plan_artefact-sync-m1.md),
 [plan_artefact-sync-m2.md](plan_artefact-sync-m2.md),

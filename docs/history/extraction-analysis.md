@@ -1,5 +1,9 @@
 # Extraction analysis of `scripts/artefacts.py`
 
+> Historical record. Every `kevinlin.github.io/...` citation points at the private site repository
+> this skill was extracted from, so the line numbers are not verifiable from here. Kept for the
+> reasoning it carries, not as a reference you can follow.
+
 Scope: the current implementation is a 2,336-line, single-file Python CLI with a 2,510-line test module. The target requirement still describes the script as 2,310 lines, so even the size statement has drifted (`docs/specs/requirement_artefact-sync.md:8-17`; `kevinlin.github.io/scripts/artefacts.py:1-2336`; `kevinlin.github.io/tests/test_artefacts.py:1-2510`).
 
 ## Section 1 - Structural map

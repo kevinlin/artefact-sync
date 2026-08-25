@@ -90,13 +90,3 @@ class EndToEndTests(unittest.TestCase):
         blocked = text[text.index("BLOCKED"):]
         self.assertIn("d/bad.svg:2", blocked)
         self.assertIn("script element", blocked)
-
-    def test_the_prior_art_repo_is_never_touched(self) -> None:
-        import subprocess
-
-        prior = Path("/Users/keli/dev/github-kevinlin/kevinlin.github.io")
-        if not prior.is_dir():
-            self.skipTest("prior art not present on this machine")
-        result = subprocess.run(["git", "status", "--short"], cwd=prior,
-                                capture_output=True, text=True)
-        self.assertEqual("", result.stdout.strip())

@@ -2,8 +2,8 @@
 .env
 .env.*
 
-# Local-only Claude Code overrides (permissions, per-machine settings)
-.claude/settings.local.json
+# Local-only Claude Code overrides
+.claude/
 
 # Symlink to CLAUDE.md for non-Claude agent hosts — local convenience only
 AGENTS.md
@@ -26,5 +26,7 @@ node_modules/
 .DS_Store
 Thumbs.db
 
-# Per-repo agent handoff runtime state
-.handoff/*
+# Per-repo agent handoff runtime state — never publish
+.handoff/
+.partner/
+.claude/agents/

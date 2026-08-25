@@ -18,7 +18,7 @@ stop for review of the file the user just named.
 
 **Spec:** [design_artefact-sync.md](design_artefact-sync.md). Its supporting evidence, with
 `file:line` citations into the prior art, is
-[extraction-analysis.md](../research/extraction-analysis.md). The two defects Tasks 1 and 2 fix were
+[extraction-analysis.md](../history/extraction-analysis.md). The two defects Tasks 1 and 2 fix were
 found by the M2 live run and are recorded in [m2-acceptance.md](m2-acceptance.md) under "What the run
 found". M1's and M2's records, including the deviations this plan inherits, are
 [plan_artefact-sync-m1.md](plan_artefact-sync-m1.md) and

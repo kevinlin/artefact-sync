@@ -12,7 +12,7 @@ too, or the skill documents something it no longer does.
 ## Commands
 
 ```bash
-# whole suite (246 tests, ~11s). Run on BOTH interpreters before calling anything done.
+# whole suite (245 tests, ~11s). Run on BOTH interpreters before calling anything done.
 python3 -m unittest discover -s tests -t .
 /usr/bin/python3 -m unittest discover -s tests -t .   # macOS stock 3.9.6 — the version floor
 
@@ -91,5 +91,6 @@ These are the reason the code is shaped the way it is. Changing them changes wha
   it before arguing with a design choice; the reason is usually already there.
 - The M1-M4 plans under [docs/specs/](docs/specs/) are historical records. They describe the layout as
   it was at the time. Leave them alone.
-- [CHANGELOG.md](CHANGELOG.md) is organised by milestone, not version number — a commit is the only
-  release marker. Add to `## Unreleased`.
+- [CHANGELOG.md](CHANGELOG.md) groups milestones under a release; releases are git tags, and
+  `SKILL.md`'s `metadata.version` names the current one. Add to `## Unreleased` above the newest
+  release, creating that heading if it isn't there.

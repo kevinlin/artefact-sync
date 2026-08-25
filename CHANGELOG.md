@@ -1,18 +1,21 @@
 # Changelog
 
-What shipped in `artefact-sync`, milestone by milestone. There are no version numbers: the skill is
-distributed by `git clone` into `~/.claude/skills/`, so a commit is the only release marker, and
-`manifest.version` has no source of truth.
-
-Each milestone links to its plan under [docs/specs/](docs/specs/). Those plans carry the task
-breakdown, the deviations, and the corrections each milestone applied back to the design.
+What shipped in `artefact-sync`. Releases are git tags; `SKILL.md`'s `metadata.version` names the
+current one. Within a release the entries are the milestones that built it, newest first, each
+linking to its plan under [docs/specs/](docs/specs/). Those plans carry the task breakdown, the
+deviations, and the corrections each milestone applied back to the design.
 
 ---
 
-## Layout — the agent-skill folder convention (2026-08-25)
+## 1.0.0 — 2026-08-25
+
+First public release. M1 through M4 built it: the portable core, `publish`, `add`, and a release
+gate that required zero rewrites of an already-published tree. 245 tests pass on 3.9.6 and 3.13.
+
+### Layout — the agent-skill folder convention (2026-08-25)
 
 The skill root now holds `SKILL.md` and the conventional folders: `assets`, `docs`, `scripts`,
-`tests`. No behaviour changed; 246 tests pass on 3.9.6 and 3.13, as before.
+`tests`. No behaviour changed; 245 tests pass on 3.9.6 and 3.13, as before.
 
 - The `artefact_sync/` package flattened into `scripts/`. The fourteen modules import each other by
   bare name, because running a file in `scripts/` puts that directory on `sys.path`.
@@ -29,9 +32,9 @@ The skill root now holds `SKILL.md` and the conventional folders: `assets`, `doc
 
 ---
 
-## M4 — release gate against a probe pair (2026-08-25)
+### M4 — release gate against a probe pair (2026-08-25)
 
-[plan](docs/specs/plan_artefact-sync-m4.md) · [acceptance](docs/specs/m4-acceptance.md) · 246 tests
+[plan](docs/specs/plan_artefact-sync-m4.md) · [acceptance](docs/specs/m4-acceptance.md) · 245 tests
 
 The gate: publish a tree with the prior art, adopt it with the skill, require zero rewrites. That
 procedure found four defects, each of which silently rewrote published content, plus one adoption
@@ -60,7 +63,7 @@ blocker that stopped the first run dead.
 Migrating `kevinlin.github.io` became a follow-on rather than the gate. It still needs
 `site.catalogue.section_links` and a new home for the atlas build.
 
-## M3 — `add`, and plan output that tells the whole truth (2026-08-24)
+### M3 — `add`, and plan output that tells the whole truth (2026-08-24)
 
 [plan](docs/specs/plan_artefact-sync-m3.md) · 227 tests
 
@@ -78,7 +81,7 @@ Migrating `kevinlin.github.io` became a follow-on rather than the gate. It still
 
 The orphan warning and the collection name came out of M2's live run. No test caught either.
 
-## M2 — `publish` (2026-08-23)
+### M2 — `publish` (2026-08-23)
 
 [plan](docs/specs/plan_artefact-sync-m2.md) · [acceptance](docs/specs/m2-acceptance.md)
 
@@ -104,7 +107,7 @@ The orphan warning and the collection name came out of M2's live run. No test ca
 The acceptance run against a disposable Pages repository passed all fifteen rows and exposed two M1
 defects, both deferred to M3 by name.
 
-## M1 — the portable core (2026-08-22)
+### M1 — the portable core (2026-08-22)
 
 [plan](docs/specs/plan_artefact-sync-m1.md) · 131 tests
 

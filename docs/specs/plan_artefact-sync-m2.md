@@ -17,7 +17,7 @@ unchanged so `publish` can call it without a `cli` → `publish` → `cli` cycle
 
 **Spec:** [design_artefact-sync.md](design_artefact-sync.md). Its supporting evidence, with
 `file:line` citations into the prior art, is
-[extraction-analysis.md](../research/extraction-analysis.md). M1's record, including the deviations
+[extraction-analysis.md](../history/extraction-analysis.md). M1's record, including the deviations
 this plan inherits, is [plan_artefact-sync-m1.md](plan_artefact-sync-m1.md).
 
 ## Global Constraints

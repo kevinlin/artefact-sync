@@ -19,7 +19,7 @@ keeps the core testable with no git, no network and no repo on disk.
 **Tech Stack:** Python 3.9, standard library only, `unittest`.
 
 **Spec:** [design_artefact-sync.md](design_artefact-sync.md). Its supporting evidence, with
-`file:line` citations into the prior art, is [extraction-analysis.md](../research/extraction-analysis.md).
+`file:line` citations into the prior art, is [extraction-analysis.md](../history/extraction-analysis.md).
 
 ## Global Constraints
 

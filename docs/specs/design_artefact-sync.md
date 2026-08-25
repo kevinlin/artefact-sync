@@ -9,7 +9,7 @@ Date: 2026-08-25
 
 Refines [requirement_artefact-sync.md](requirement_artefact-sync.md) against what the prior art
 actually does. Every behavioural claim here is sourced from
-[extraction-analysis.md](../research/extraction-analysis.md), which cites `file:line` in
+[extraction-analysis.md](../history/extraction-analysis.md), which cites `file:line` in
 `kevinlin.github.io` for each one. Where this document and the requirement disagree, this one wins,
 and the disagreement is listed in "Changes to the requirement" below.
 

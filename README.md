@@ -126,10 +126,18 @@ and any file it wants to rewrite is a rendering difference to explain *before* y
 ## Development
 
 ```bash
-python3 -m unittest discover -s tests -t .            # 246 tests, ~11s
+python3 -m unittest discover -s tests -t .            # 245 tests, ~11s
 /usr/bin/python3 -m unittest discover -s tests -t .   # macOS stock 3.9.6 — the version floor
 ```
 
-Both interpreters, every time. [CLAUDE.md](CLAUDE.md) has the constraints that have a test behind
-them; [docs/specs/design_artefact-sync.md](docs/specs/design_artefact-sync.md) is authoritative on
+Both interpreters, every time. CI runs the same command on 3.9 and 3.13.
+[CLAUDE.md](CLAUDE.md) lists the constraints that have a test behind them.
+[docs/specs/design_artefact-sync.md](docs/specs/design_artefact-sync.md) is authoritative on
 behaviour and records why each design call was made.
+
+## Licence
+
+MIT. See [LICENSE](LICENSE).
+
+`assets/marked.min.js` is [marked](https://github.com/markedjs/marked) v15.0.12, vendored
+unmodified. Copyright (c) 2011-2025 Christopher Jeffrey, MIT licensed.
