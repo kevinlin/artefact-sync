@@ -1,9 +1,11 @@
 # Design: artefact-sync
 
-Status: M1 and M2 built. `init`, `plan`, `sync`, `validate` and `publish` ship, and the
-provider seam has live evidence: the M2 acceptance run passed fifteen rows against a disposable
-Pages repository ([m2-acceptance.md](m2-acceptance.md)). M3-M4 unbuilt.
-Date: 2026-08-22
+Status: M1 to M4 built. `init`, `plan`, `sync`, `add`, `validate` and `publish` ship. The provider
+seam has live evidence: the M2 acceptance run passed fifteen rows against a disposable Pages
+repository ([m2-acceptance.md](m2-acceptance.md)). The extraction has fidelity evidence: M4's gate
+reproduced a prior-art-published tree byte for byte ([m4-acceptance.md](m4-acceptance.md)).
+Migrating `kevinlin.github.io` is a follow-on, not a milestone gate - see M4-h.
+Date: 2026-08-25
 
 Refines [requirement_artefact-sync.md](requirement_artefact-sync.md) against what the prior art
 actually does. Every behavioural claim here is sourced from
@@ -31,6 +33,17 @@ The requirement was written from memory of the script. The analysis read it. Fou
 | E4 | The `.svg` gate is "the same spirit as the existing cdnjs ban" | The cdnjs ban generalises: warn on any external reference in HTML, block none | The current rule blocks one CDN by raw substring and permits every other remote host |
 | E5 | Markdown round-trip is byte-exact | Text-exact after UTF-8 decode and trailing-newline normalisation | Rendering rejects non-UTF-8 and appends a missing final newline. `apply` also never verified the round trip; it compared rendered bytes to the rendered bytes it had just computed |
 | E6 | `protected_files` can hold `CNAME` to protect the domain | Dropped from the sample | `protected_files` resolve under `artefacts/`, so it meant `artefacts/CNAME`. The repo-root `CNAME` was never reachable by orphan scanning |
+| M4-a | Template placeholders are `$title, $favicon, $prefix, $vendor, ...` | `$vendor` is the vendor path alone; `$prefix` is the `../` climb; the shipped template composes `src="$prefix$vendor"` | `render_markdown_page` passed `vendor=prefix + vendor_path`, and the shipped template used `$vendor` on its own, so the two placeholders could not both be used as documented. A template using both, as the prior art's does, produced `../../../../vendor/marked.min.js` |
+| M4-b | E5: the invariant is "text-exact after UTF-8 decode and trailing-newline normalisation" | Text-exact after UTF-8 decode, **line-ending normalisation**, and trailing-newline normalisation | Git with `core.autocrlf=input` - a common default - stores LF for a CRLF working-tree file. Without normalisation the bytes `apply` writes are not the bytes that get published, and a fresh clone reports the same entry CHANGED on every run, forever. Normalising CRLF to LF is safe for Markdown: a hard line break is trailing spaces or a backslash, never a CR |
+| M4-c | The Markdown block is `<script type="text/markdown" id="artefact-source">` | `<script type="text/markdown" id="markdown-source">` followed by a newline | That is what the prior art published (`artefacts.py:525-526`). Keeping the skill's spelling rewrites every Markdown page an adopter has, and `extract_markdown` cannot read any of them, so the diff preview and `apply`'s round-trip check both go blind on exactly the pages an adoption needs to check |
+| M4-d | "`date` lets the catalogue sort by recency instead of hand-maintained `order`" | Collection **cards** sort by their newest entry date, descending, stable on `order`. **Entries** inside a card keep sorting by `order` | The prior art sorts cards by recency and entries by `order` (`artefacts.py:1360-1383`). Sorting entries by date too reorders any curated collection, and it is the wrong reading anyway: a card's date answers "is this collection fresh", while an entry's position inside a card is editorial |
+| M4-e | "Customising the standalone catalogue means adding markers to it and switching to inject mode, so there is no second template" | True for the shell, false for the fragment. `render_catalogue` adopts the prior art's markup | The fragment's class names are what the host page's CSS targets, so a host page cannot adopt a foreign fragment without a rewrite. Making the tool's markup the prior art's is what lets any existing inject-mode page keep its stylesheet |
+| M4-f | `head_manifest` returns "the manifest as of HEAD, or None when it was never committed" | Also `None` when HEAD's manifest cannot be parsed, after one attempt with a placeholder `site` injected | A repository adopting the skill has a committed manifest with no `site` block, and the invariant check reads only `id`, `destination` and `title` from it. Failing the whole run on a field the check never touches makes adoption impossible; returning `None` immediately would throw away the URL-freeze guard on precisely the run where published destinations are at stake. Injecting a placeholder keeps the guard |
+| M4-g | `HOMEPAGE_FILES` is part of the site-coupling surface still to port | Not ported | It backs a `git diff --exit-code base...HEAD -- index.html styles.css script.js` check. `publish`'s preflight already refuses any change outside `artefacts/`, which is strictly stronger and needs no base ref |
+| M4-h | M4 is "the release gate, migrating `kevinlin.github.io`", and the migration "has to rehome the atlas" | The gate runs against a disposable probe pair. `kevinlin.github.io` is untouched, so its `scripts/artefacts.py`, its `validate-artefacts.yml` and its atlas hook all stay exactly as they are | Deferred by the milestone's owner. The extraction proof does not need the live site's URLs at risk, and the fixes M4 lands are most of what makes the live migration a no-op whenever it is taken. D1 still stands as the eventual destination; it is no longer M4's gate |
+| M4-i | `ignored_sources` matching "is currently exact-string or literal `dir/` prefix", widened by E3 to `fnmatch` | Recorded as a migration hazard, with a test. A bare `name/` rule matches that directory **at any depth** in the skill; in the prior art it matches only at the root | Found by the probe corpus: `prompts/` ignores `mingpt-vs-toy-transformer/prompts/infographic.md` under the skill and nothing under the prior art. The skill's behaviour is deliberate (`manifest.is_ignored` checks `directory in source.parts[:-1]`) and better, but a manifest carried over from the prior art can start ignoring files it used to publish, and those show up as deletions. The live manifest happens to be safe because all three of its `prompts/` rules carry full prefixes |
+| M4-j | (not addressed) | `site.catalogue.section_links` is **not** built | The prior art injects a 3D showcase link into the `Image collections` heading unconditionally, and regenerating that heading would delete it. The probe corpus produces one section and no such link, so nothing in M4 needs the hook. It is the live migration's requirement, recorded in "Release ladder", and building it in M4 would have shipped an unexercised feature |
+| M4-k | "57 real entries" | 56, and not M4's corpus | Counted in the live manifest. Recorded so the number stops propagating |
 
 Two more corrections, no design impact: the catalogue markers live in `artefacts/index.html`, not the
 site homepage; and the site-coupling surface is materially larger than the seven items the
@@ -85,6 +98,9 @@ worked example.
 `date` is optional. When absent, the first `sync` stamps it from source mtime and freezes it into the
 manifest. Today the catalogue reads mtime live, so re-downloading an unchanged file changes its card
 date and reorders the catalogue.
+
+A `dir/` rule matches that directory name at any depth, not only at the root, so shortening a
+carried-over rule silently widens it (M4-i).
 
 `ignored_sources` gains `fnmatch` globbing. Matching is currently exact-string or literal `dir/`
 prefix, so the requirement's seeded `*.local.*` rule would match nothing and publish the files it was
@@ -199,9 +215,11 @@ the file does not undo it. The confirmation says so.
 ## Rendering
 
 Markdown keeps the client-side mechanism: source embedded verbatim in a `<script type="text/markdown">`
-block, rendered by vendored `marked.js`. The invariant is text-exact after UTF-8 decode and
-trailing-newline normalisation, not byte-exact: rendering rejects non-UTF-8 and appends a final
-newline when one is absent. No test covers a Markdown source missing its final newline; the port adds
+block, rendered by vendored `marked.js`. The invariant is text-exact after UTF-8 decode, line-ending
+normalisation and trailing-newline normalisation, not byte-exact: rendering rejects non-UTF-8,
+rewrites CRLF and lone CR to LF, and appends a final newline when one is absent. Line endings are
+normalised because git with `core.autocrlf=input` stores LF for a CRLF working-tree file, so a page
+keeping its CRs is not the page that gets published (M4-b). No test covers a Markdown source missing its final newline; the port adds
 one.
 
 `apply` gains a real round-trip check: extract the embedded Markdown, compare to source. Today it
@@ -209,10 +227,11 @@ compares rendered bytes to the rendered bytes it just computed, which proves not
 trip, despite a docstring claiming both the diff preview and `apply`'s byte check depend on it.
 
 The template moves to `artefacts/page-template.html` and switches from `str.format` to
-`string.Template`. The current template needs 55 doubled-brace escapes because its CSS is full of
+`string.Template`. The current template needs 36 doubled-brace pairs because its CSS is full of
 braces; lifted verbatim into a `.html` file it would be neither valid nor previewable. `string.Template`
 is stdlib and ignores braces, so nothing needs escaping. Placeholders: `$title`, `$favicon`, `$prefix`,
-`$vendor`, `$markdown`, `$block_start`, `$block_end`.
+`$vendor`, `$markdown`, `$block_start`, `$block_end`. `$prefix` is the `../` climb and `$vendor` is the
+vendor path alone, so a template composes them as `src="$prefix$vendor"` (M4-a).
 
 `manifest.json`, `index.html` and `page-template.html` are reserved destinations: no entry or
 protected file may claim one, or publishing would overwrite the template that renders it.
@@ -221,6 +240,9 @@ Catalogue: generate a standalone `artefacts/index.html` by default; if `site.cat
 page containing the markers, inject there instead. Standalone generation does not exist today: the
 planner cannot run at all in a repo whose catalogue shell is missing. Customising the standalone
 catalogue means adding markers to it and switching to inject mode, so there is no second template.
+Inject mode reuses the same fragment, so the host page's CSS is what pins the fragment's class names
+- `card-grid`, `card`, `card-updated` - and the fragment follows the prior art's markup for exactly
+that reason (M4-e).
 
 ## File types
 
@@ -273,17 +295,24 @@ a live host. That is the half changing most, and the disposable repo is its only
 - M1: portable core, no network. `init`, `plan`, `sync`, `validate` against a local fixture repo.
 - M2: disposable GitHub Pages repo. `publish` end to end. The provider seam's only real test.
 - M3: `add`, secret warnings, SVG validator, plan output.
-- M4: release gate, migrating `kevinlin.github.io`.
+- M4: release gate against a disposable probe pair.
 
-M4 is the acceptance test. Copy the site's existing template verbatim into `page-template.html`, seed
-`date` from current mtimes, install the skill, run `plan` against the live tree, and require zero
-changes. An empty plan across 57 real entries proves the extraction preserved behaviour better than
-any assertion could: drift in escaping, catalogue rendering, ordering or transformation all show up
-as a non-empty plan. Intentional changes come after that green run.
+M4 is the acceptance test, and it runs against a throwaway repository rather than the live site
+(M4-h). Publish a tree with the prior art from a real source folder, copy that template verbatim into
+`page-template.html`, seed `date` from current mtimes, install the skill, run `plan`, and require zero
+changes. An empty plan proves the extraction preserved behaviour better than any assertion could:
+drift in escaping, catalogue rendering, ordering or transformation all show up as a non-empty plan.
+It found four such drifts, all fixed in M4. Intentional changes come after that green run. Recorded
+in [m4-acceptance.md](m4-acceptance.md).
 
-Migration also has to rehome the atlas. `build_showcase_atlas.py` is triggered from `apply` and
-`publish` today and is not ported, so `kevinlin.github.io` needs it run another way: a git hook, or a
-step in its own workflow. Otherwise the 3D showcase goes stale after the first sync.
+Migrating `kevinlin.github.io` is a follow-on, not a milestone gate, and it has two unbuilt
+prerequisites. First, `site.catalogue.section_links` (M4-j): the prior art injects a 3D showcase link
+into the `Image collections` heading, and regenerating that heading deletes it. Second, a home for
+the atlas. `build_showcase_atlas.py` is triggered from `apply` and `publish` today and is not ported,
+so the site needs it run another way: a git hook, or a step in its own workflow. Otherwise the 3D
+showcase goes stale after the first sync. The same read-only comparison M4 ran against the probe was
+run against the live tree with those two applied to a scratch copy: all 56 published entry blobs and
+`artefacts/index.html` came out byte-identical.
 
 ## Consequences accepted
 
