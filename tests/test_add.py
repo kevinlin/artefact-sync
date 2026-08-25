@@ -8,7 +8,7 @@ import unittest
 import unittest.mock
 from pathlib import Path
 
-from artefact_sync import cli
+import cli
 from tests.helpers import make_repo, make_source_tree
 
 

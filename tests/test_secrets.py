@@ -4,7 +4,7 @@ import tempfile
 import unittest
 from pathlib import Path, PurePosixPath
 
-from artefact_sync import cli, plan as p
+import cli, plan as p
 from tests.helpers import make_repo, make_source_tree
 
 
@@ -62,7 +62,7 @@ class PlanIntegrationTests(unittest.TestCase):
             cli.main(["init", "--pointer", str(pointer),
                       "--repo", str(repo), "--source", str(source)])
             context = cli.resolve_context(cli.parse_args(["plan", "--pointer", str(pointer)]))
-            from artefact_sync import manifest as manifest_module
+            import manifest as manifest_module
             sync_plan = p.create_sync_plan(
                 context, manifest_module.load_manifest(context.artefacts_root))
             text = p.format_plan(sync_plan)

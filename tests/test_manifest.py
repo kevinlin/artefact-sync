@@ -4,8 +4,8 @@ import json
 import unittest
 from pathlib import PurePosixPath
 
-from artefact_sync import manifest as m
-from artefact_sync.errors import ValidationError
+import manifest as m
+from errors import ValidationError
 
 SITE = {"base_url": "https://x.example/artefacts/"}
 

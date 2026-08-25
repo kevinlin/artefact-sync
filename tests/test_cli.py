@@ -8,8 +8,8 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from artefact_sync import cli, manifest
-from artefact_sync.config import site_from_dict
+import cli, manifest
+from config import site_from_dict
 from tests.helpers import make_repo, make_source_tree
 
 

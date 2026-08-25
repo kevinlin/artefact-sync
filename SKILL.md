@@ -1,22 +1,18 @@
 ---
 name: artefact-sync
 description: One-way sync a local folder into the artefacts tree of a configured GitHub Pages repository. Use when planning, applying, or validating published artefacts while preserving existing public URLs.
+metadata:
+  version: 1.0.0
 ---
 
 # artefact-sync
 
 Sync approved files from one local source folder into `artefacts/` in one configured Pages repository. The manifest in the destination repository owns public paths and site settings. The machine-local pointer owns the source and repository paths.
 
-Run commands from the skill root:
+Run commands from any directory:
 
 ```bash
-python3 -m artefact_sync <command>
-```
-
-From another directory, point Python at the installed skill:
-
-```bash
-PYTHONPATH="$HOME/.claude/skills/artefact-sync" python3 -m artefact_sync <command>
+python3 "$HOME/.claude/skills/artefact-sync/scripts/artefact_sync.py" <command>
 ```
 
 ## Workflow
@@ -126,4 +122,4 @@ this order, and never delete a published file to resolve a mismatch.
 
 ## Vendored dependency
 
-The bundled `artefact_sync/assets/marked.min.js` is marked 15.0.12, copyright 2011-2025 Christopher Jeffrey, licensed under the MIT License.
+The bundled `assets/marked.min.js` is marked 15.0.12, copyright 2011-2025 Christopher Jeffrey, licensed under the MIT License.

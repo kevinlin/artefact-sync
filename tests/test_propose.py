@@ -4,9 +4,9 @@ import tempfile
 import unittest
 from pathlib import Path, PurePosixPath
 
-from artefact_sync import propose
-from artefact_sync.config import site_from_dict
-from artefact_sync.manifest import Collection, Entry, Manifest
+import propose
+from config import site_from_dict
+from manifest import Collection, Entry, Manifest
 from tests.helpers import make_source_tree
 
 

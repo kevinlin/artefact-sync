@@ -3,11 +3,10 @@ from __future__ import annotations
 import html
 import re
 import string
-from pathlib import Path
 
-from .config import Site
-from .errors import ValidationError
-from .manifest import Entry, Manifest
+from config import ASSETS, Site
+from errors import ValidationError
+from manifest import Entry, Manifest
 
 CATALOGUE_START = "<!-- ARTEFACTS:START -->"
 CATALOGUE_END = "<!-- ARTEFACTS:END -->"
@@ -107,7 +106,7 @@ def replace_generated_catalogue(document: str, fragment: str) -> str:
 
 
 def render_standalone_catalogue(manifest: Manifest, site: Site) -> bytes:
-    path = Path(__file__).resolve().parent / "assets" / CATALOGUE_TEMPLATE_NAME
+    path = ASSETS / CATALOGUE_TEMPLATE_NAME
     template = string.Template(path.read_text(encoding="utf-8"))
     document = template.substitute(
         title="Artefacts",

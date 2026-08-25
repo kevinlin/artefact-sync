@@ -7,7 +7,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from artefact_sync import cli
+import cli
 from tests.helpers import make_repo, make_source_tree
 
 NOTE = b"# Queue backlog\n\nSix hours of delay. Root cause below.\n"
@@ -52,7 +52,7 @@ class EndToEndTests(unittest.TestCase):
             self.assertEqual(CLEAN_SVG, (published / "diagrams/flow.svg").read_bytes())
 
             # Markdown survives the round trip.
-            from artefact_sync.render import extract_markdown
+            from render import extract_markdown
 
             page = (published / "incident/queue-backlog/index.html").read_text(encoding="utf-8")
             self.assertEqual(NOTE.decode("utf-8"), extract_markdown(page))

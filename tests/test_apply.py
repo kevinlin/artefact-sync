@@ -5,15 +5,15 @@ import tempfile
 import unittest
 from pathlib import Path, PurePosixPath
 
-from artefact_sync import apply as a
-from artefact_sync.config import Context, site_from_dict
-from artefact_sync.errors import ValidationError
-from artefact_sync.manifest import Entry, resolve_within
+import apply as a
+from config import Context, site_from_dict
+from errors import ValidationError
+from manifest import Entry, resolve_within
 
 
 class RoundTripVerificationTests(unittest.TestCase):
     def test_passes_when_the_embedded_markdown_matches_the_source(self) -> None:
-        from artefact_sync import render
+        import render
 
         entry = Entry(
             id="e", source=PurePosixPath("a.md"),
@@ -31,7 +31,7 @@ class RoundTripVerificationTests(unittest.TestCase):
         self.assertIsNone(a.verify_markdown_round_trip(b"# x\n", rendered, "a.md"))
 
     def test_a_crlf_source_still_verifies_against_the_lf_page(self) -> None:
-        from artefact_sync import render
+        import render
 
         entry = Entry(
             id="e", source=PurePosixPath("a.md"),
@@ -81,7 +81,7 @@ class ApplyTests(unittest.TestCase):
                 )
 
     def test_an_orphan_is_never_unlinked(self) -> None:
-        from artefact_sync import plan as p
+        import plan as p
 
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp) / "artefacts"

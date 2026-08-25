@@ -5,10 +5,10 @@ from dataclasses import dataclass, replace
 from datetime import date
 from pathlib import PurePosixPath
 
-from . import catalogue, manifest as manifest_module, propose, render, scan
-from .config import Context
-from .errors import ValidationError
-from .manifest import Entry, Manifest
+import catalogue, manifest as manifest_module, propose, render, scan
+from config import Context
+from errors import ValidationError
+from manifest import Entry, Manifest
 
 DELETION_KINDS = frozenset({"delete"})
 WRITE_KINDS = frozenset({"add", "update"})

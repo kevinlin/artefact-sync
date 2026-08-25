@@ -3,7 +3,7 @@ from __future__ import annotations
 import subprocess
 from pathlib import Path
 
-from artefact_sync import provider
+import provider
 
 
 # One happy-path answer per command publish issues. A test overrides only the line it is about.

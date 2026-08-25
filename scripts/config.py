@@ -4,7 +4,12 @@ import json
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
 
-from .errors import ConfigError
+from errors import ConfigError
+
+# The skill's bundled templates and vendored JS, at <skill root>/assets. This module lives at
+# <skill root>/scripts, so this is the one lookup the "nothing below the CLI resolves paths from
+# __file__" rule exempts.
+ASSETS = Path(__file__).resolve().parent.parent / "assets"
 
 POINTER_PATH = Path.home() / ".config" / "artefact-sync" / "config.json"
 ARTEFACTS_DIRNAME = "artefacts"

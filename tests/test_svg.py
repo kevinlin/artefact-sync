@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import unittest
 
-from artefact_sync.errors import ValidationError
-from artefact_sync.scan import validate_svg
+from errors import ValidationError
+from scan import validate_svg
 
 CLEAN = b"""<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10">
   <rect width="10" height="10" fill="#0af"/>

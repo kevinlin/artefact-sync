@@ -6,7 +6,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from artefact_sync import cli
+import cli
 from tests.helpers import make_repo, make_source_tree
 
 # A source with CRLF endings and no final newline: both normalisations at once.

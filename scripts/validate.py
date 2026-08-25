@@ -5,8 +5,8 @@ from html.parser import HTMLParser
 from pathlib import Path, PurePosixPath
 from urllib.parse import unquote, urlsplit
 
-from . import catalogue, config, manifest, plan as plan_module, render, scan
-from .errors import ValidationError
+import catalogue, config, manifest, plan as plan_module, render, scan
+from errors import ValidationError
 
 
 class _ReferenceParser(HTMLParser):

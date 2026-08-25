@@ -4,14 +4,14 @@ import string
 import unittest
 from pathlib import Path, PurePosixPath
 
-from artefact_sync import render
-from artefact_sync.config import site_from_dict
-from artefact_sync.errors import TransformationError
-from artefact_sync.manifest import Entry
+import render
+from config import site_from_dict
+from errors import TransformationError
+from manifest import Entry
 
 SITE = site_from_dict({"base_url": "https://x.example/artefacts/"})
 TEMPLATE = string.Template(
-    Path("artefact_sync/assets/page-template.html").read_text(encoding="utf-8")
+    Path("assets/page-template.html").read_text(encoding="utf-8")
 )
 ENTRY = Entry(
     id="e", source=PurePosixPath("a/n.md"), destination=PurePosixPath("a/n/index.html"),
@@ -80,12 +80,12 @@ class RoundTripTests(unittest.TestCase):
 
 class TemplateTests(unittest.TestCase):
     def test_the_shipped_template_needs_no_brace_escaping(self) -> None:
-        raw = Path("artefact_sync/assets/page-template.html").read_text(encoding="utf-8")
+        raw = Path("assets/page-template.html").read_text(encoding="utf-8")
         self.assertNotIn("{{", raw)
         self.assertNotIn("}}", raw)
 
     def test_the_shipped_template_carries_no_branding(self) -> None:
-        raw = Path("artefact_sync/assets/page-template.html").read_text(encoding="utf-8").lower()
+        raw = Path("assets/page-template.html").read_text(encoding="utf-8").lower()
         for token in ("kevin", "kevinlin", "github.io"):
             self.assertNotIn(token, raw)
 
@@ -129,5 +129,5 @@ class TemplateTests(unittest.TestCase):
 
     def test_the_browser_strips_the_leading_source_newline(self) -> None:
         # textContent begins at that newline; extract_markdown's slice does not.
-        raw = Path("artefact_sync/assets/page-template.html").read_text(encoding="utf-8")
+        raw = Path("assets/page-template.html").read_text(encoding="utf-8")
         self.assertIn(r".replace(/^\n/, '')", raw)

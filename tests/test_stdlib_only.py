@@ -4,15 +4,18 @@ import ast
 import pathlib
 import unittest
 
-PACKAGE = pathlib.Path(__file__).resolve().parent.parent / "artefact_sync"
+PACKAGE = pathlib.Path(__file__).resolve().parent.parent / "scripts"
 
 # sys.stdlib_module_names is 3.10+, and the floor is 3.9, so the allowlist is explicit.
 ALLOWED = {
     "__future__", "argparse", "collections", "contextlib", "dataclasses", "datetime",
     "difflib", "fnmatch", "hashlib", "html", "http", "io", "json", "os", "pathlib",
     "re", "shutil", "string", "subprocess", "sys", "tempfile", "textwrap", "time",
-    "typing", "urllib", "artefact_sync",
+    "typing", "urllib",
 }
+
+# The modules import each other by bare name, so every sibling counts as allowed.
+ALLOWED |= {path.stem for path in PACKAGE.glob("*.py")}
 
 
 class StdlibOnlyTests(unittest.TestCase):
@@ -36,7 +39,6 @@ class StdlibOnlyTests(unittest.TestCase):
         missing = [
             path.name
             for path in sorted(PACKAGE.rglob("*.py"))
-            if path.name != "__init__.py"
-            and "from __future__ import annotations" not in path.read_text(encoding="utf-8")
+            if "from __future__ import annotations" not in path.read_text(encoding="utf-8")
         ]
         self.assertEqual([], missing)

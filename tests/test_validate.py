@@ -8,10 +8,10 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
-from artefact_sync import cli, validate
-from artefact_sync.config import Context, Site
-from artefact_sync.errors import ValidationError
-from artefact_sync.manifest import Manifest
+import cli, validate
+from config import Context, Site
+from errors import ValidationError
+from manifest import Manifest
 from tests.helpers import make_repo, make_source_tree
 
 

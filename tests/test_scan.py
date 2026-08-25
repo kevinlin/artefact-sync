@@ -4,7 +4,7 @@ import tempfile
 import unittest
 from pathlib import Path, PurePosixPath
 
-from artefact_sync import scan
+import scan
 from tests.helpers import make_repo, make_source_tree
 
 

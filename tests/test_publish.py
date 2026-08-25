@@ -9,9 +9,9 @@ from datetime import datetime
 from pathlib import Path, PurePosixPath
 from unittest import mock
 
-from artefact_sync import cli, config, manifest, plan as plan_module, publish
-from artefact_sync.config import site_from_dict
-from artefact_sync.errors import PublishError, ValidationError
+import cli, config, manifest, plan as plan_module, publish
+from config import site_from_dict
+from errors import PublishError, ValidationError
 from tests.helpers import RecordingFetcher, RecordingRunner, make_repo, make_source_tree
 
 BASE_URL = "https://someone.github.io/notes/artefacts/"

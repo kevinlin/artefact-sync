@@ -5,8 +5,8 @@ import re
 from dataclasses import dataclass, replace
 from pathlib import Path, PurePosixPath
 
-from .errors import ValidationError
-from .manifest import APPROVED_EXTENSIONS, is_ignored
+from errors import ValidationError
+from manifest import APPROVED_EXTENSIONS, is_ignored
 
 IGNORED_METADATA_NAMES = frozenset({".DS_Store", "Thumbs.db"})
 

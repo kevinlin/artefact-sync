@@ -6,9 +6,9 @@ import re
 import string
 from pathlib import Path, PurePosixPath
 
-from .config import Context, Site
-from .errors import TransformationError
-from .manifest import TEMPLATE_NAME, VENDOR_NAME, Entry, Manifest, resolve_within
+from config import ASSETS, Context, Site
+from errors import TransformationError
+from manifest import TEMPLATE_NAME, VENDOR_NAME, Entry, Manifest, resolve_within
 
 BLOCK_START = '<script type="text/markdown" id="markdown-source">\n'
 BLOCK_END = "</script>"
@@ -64,7 +64,7 @@ def load_template(artefacts_root: Path) -> string.Template:
     override = artefacts_root / TEMPLATE_NAME
     if override.is_file():
         return string.Template(override.read_text(encoding="utf-8"))
-    bundled = Path(__file__).resolve().parent / "assets" / TEMPLATE_NAME
+    bundled = ASSETS / TEMPLATE_NAME
     return string.Template(bundled.read_text(encoding="utf-8"))
 
 

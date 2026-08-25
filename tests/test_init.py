@@ -9,7 +9,7 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
-from artefact_sync import cli, manifest
+import cli, manifest
 from tests.helpers import make_repo, make_source_tree
 
 ENV = {"PATH": "/usr/bin:/bin:/usr/local/bin"}
@@ -50,12 +50,12 @@ class InitTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             repo, _source, _pointer = self._init(Path(tmp))
             loaded = manifest.load_manifest(repo / "artefacts")
-        from artefact_sync.render import markdown_vendor_path
+        from render import markdown_vendor_path
 
         self.assertEqual("vendor/marked.min.js", markdown_vendor_path(loaded).as_posix())
 
     def test_seeds_ignore_rules_that_actually_match(self) -> None:
-        from artefact_sync.scan import is_ignored
+        from scan import is_ignored
         from pathlib import PurePosixPath
 
         with tempfile.TemporaryDirectory() as tmp:

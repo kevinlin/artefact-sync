@@ -3,9 +3,9 @@ from __future__ import annotations
 import unittest
 from pathlib import PurePosixPath
 
-from artefact_sync import render
-from artefact_sync.config import site_from_dict
-from artefact_sync.manifest import Entry
+import render
+from config import site_from_dict
+from manifest import Entry
 
 SITE = site_from_dict({"base_url": "https://x.example/artefacts/"})
 
@@ -26,7 +26,7 @@ class TransformTests(unittest.TestCase):
         self.assertIn(b"CCC", out)
 
     def test_a_replacement_that_never_matches_is_an_error(self) -> None:
-        from artefact_sync.errors import TransformationError
+        from errors import TransformationError
 
         with self.assertRaises(TransformationError):
             render.transform_html(b"<html></html>", entry(replacements={"absent": "x"}), SITE)

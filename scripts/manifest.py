@@ -9,8 +9,8 @@ from datetime import date as date_cls
 from pathlib import Path, PurePosixPath
 from typing import Any, Callable
 
-from .config import Site, site_from_dict, site_to_dict
-from .errors import ArtefactSyncError, ConfigError, ValidationError
+from config import Site, site_from_dict, site_to_dict
+from errors import ArtefactSyncError, ConfigError, ValidationError
 
 MANIFEST_NAME = "manifest.json"
 TEMPLATE_NAME = "page-template.html"

@@ -3,15 +3,12 @@ from __future__ import annotations
 import string
 from pathlib import Path, PurePosixPath
 
-from .catalogue import CATALOGUE_TEMPLATE_NAME
-from .config import DEFAULT_FAVICON, Site
-from .errors import ValidationError
-from .manifest import Entry, TEMPLATE_NAME, VENDOR_NAME
-from .render import extract_markdown, load_template, render_markdown_page
+from catalogue import CATALOGUE_TEMPLATE_NAME
+from config import ASSETS, DEFAULT_FAVICON, Site
+from errors import ValidationError
+from manifest import Entry, TEMPLATE_NAME, VENDOR_NAME
+from render import extract_markdown, load_template, render_markdown_page
 
-# The bundled assets belong to the installed package, so this is the one lookup the
-# "nothing resolves paths from __file__" rule exempts.
-ASSETS = Path(__file__).resolve().parent / "assets"
 REPAIR = "the install looks damaged; repair it with: git -C ~/.claude/skills/artefact-sync pull"
 PROBE_MARKDOWN = b"# Probe\n\nOne $dollar, one </script> escape, one trailing newline.\n"
 PAGE_FIELDS = {

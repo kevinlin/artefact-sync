@@ -5,8 +5,8 @@ import tempfile
 import unittest
 from pathlib import Path, PurePosixPath
 
-from artefact_sync import config
-from artefact_sync.errors import ConfigError
+import config
+from errors import ConfigError
 
 
 class PointerTests(unittest.TestCase):

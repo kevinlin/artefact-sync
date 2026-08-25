@@ -5,10 +5,10 @@ import shutil
 import sys
 from pathlib import Path, PurePosixPath
 
-from . import apply as apply_module
-from . import catalogue, config, manifest, plan as plan_module, provider, publish, selfcheck
-from . import validate
-from .errors import ArtefactSyncError, ConfigError, UnlistedSources
+import apply as apply_module
+import catalogue, config, manifest, plan as plan_module, provider, publish, selfcheck
+import validate
+from errors import ArtefactSyncError, ConfigError, UnlistedSources
 
 EXIT_OK = 0
 EXIT_ERROR = 1
@@ -58,7 +58,7 @@ def command_init(args: argparse.Namespace) -> int:
 
     artefacts = repo_root / config.ARTEFACTS_DIRNAME
     (artefacts / "vendor").mkdir(parents=True, exist_ok=True)
-    assets = Path(__file__).resolve().parent / "assets"
+    assets = config.ASSETS
     for name, target in (
         (manifest.TEMPLATE_NAME, artefacts / manifest.TEMPLATE_NAME),
         (manifest.VENDOR_NAME, artefacts / "vendor" / manifest.VENDOR_NAME),

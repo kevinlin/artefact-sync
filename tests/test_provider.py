@@ -7,8 +7,8 @@ import unittest
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from pathlib import Path
 
-from artefact_sync import provider
-from artefact_sync.errors import PublishError
+import provider
+from errors import PublishError
 from tests.helpers import RecordingRunner, make_repo
 
 ENV = {"PATH": "/usr/bin:/bin:/usr/local/bin"}

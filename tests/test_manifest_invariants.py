@@ -5,8 +5,8 @@ import tempfile
 import unittest
 from pathlib import Path, PurePosixPath
 
-from artefact_sync import manifest as m
-from artefact_sync.errors import ValidationError
+import manifest as m
+from errors import ValidationError
 from tests.helpers import make_repo
 
 
@@ -20,7 +20,7 @@ def entry(**overrides) -> m.Entry:
 
 
 def manifest(entries) -> m.Manifest:
-    from artefact_sync.config import site_from_dict
+    from config import site_from_dict
 
     return m.Manifest(
         version=1,

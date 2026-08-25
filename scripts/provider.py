@@ -10,8 +10,8 @@ from pathlib import Path
 from typing import Callable
 from urllib.parse import urlsplit
 
-from .config import ARTEFACTS_DIRNAME
-from .errors import PublishError
+from config import ARTEFACTS_DIRNAME
+from errors import PublishError
 
 GITHUB_REMOTE = re.compile(
     r"(?:git@github\.com:|https://github\.com/)([^/]+)/(.+?)(?:\.git)?/?$"

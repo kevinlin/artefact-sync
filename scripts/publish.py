@@ -5,13 +5,13 @@ from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 
-from . import apply as apply_module, catalogue, plan as plan_module, provider
-from . import validate as validate_module
-from .config import ARTEFACTS_DIRNAME, Context
-from .errors import ArtefactSyncError, PublishError
-from .manifest import Manifest
-from .plan import SyncPlan
-from .provider import CommandRunner, run_checked
+import apply as apply_module, catalogue, plan as plan_module, provider
+import validate as validate_module
+from config import ARTEFACTS_DIRNAME, Context
+from errors import ArtefactSyncError, PublishError
+from manifest import Manifest
+from plan import SyncPlan
+from provider import CommandRunner, run_checked
 
 COMMIT_MESSAGE = "chore: sync artefacts"
 BRANCH_PREFIX = "artefact-sync"

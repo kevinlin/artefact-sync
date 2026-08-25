@@ -3,9 +3,9 @@ from __future__ import annotations
 import unittest
 from pathlib import PurePosixPath
 
-from artefact_sync import catalogue
-from artefact_sync.config import site_from_dict
-from artefact_sync.manifest import Collection, Entry, Manifest
+import catalogue
+from config import site_from_dict
+from manifest import Collection, Entry, Manifest
 
 SITE = site_from_dict({"base_url": "https://x.example/artefacts/"})
 
@@ -41,13 +41,13 @@ class InjectionTests(unittest.TestCase):
         )
 
     def test_a_missing_marker_pair_is_an_error(self) -> None:
-        from artefact_sync.errors import ValidationError
+        from errors import ValidationError
 
         with self.assertRaises(ValidationError):
             catalogue.replace_generated_catalogue("no markers here\n", "new")
 
     def test_duplicate_markers_are_an_error(self) -> None:
-        from artefact_sync.errors import ValidationError
+        from errors import ValidationError
 
         document = f"{catalogue.CATALOGUE_START}{catalogue.CATALOGUE_START}{catalogue.CATALOGUE_END}"
         with self.assertRaises(ValidationError):

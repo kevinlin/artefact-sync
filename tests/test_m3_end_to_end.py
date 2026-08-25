@@ -7,7 +7,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from artefact_sync import cli
+import cli
 from tests.helpers import make_repo, make_source_tree
 
 NOTE = b"# Cost model\n\nBuild versus buy, with the numbers.\n"

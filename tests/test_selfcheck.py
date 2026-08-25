@@ -6,9 +6,9 @@ import time
 import unittest
 from pathlib import Path
 
-from artefact_sync import selfcheck
-from artefact_sync.errors import ValidationError
-from artefact_sync.manifest import TEMPLATE_NAME
+import selfcheck
+from errors import ValidationError
+from manifest import TEMPLATE_NAME
 
 
 class SelfCheckTests(unittest.TestCase):

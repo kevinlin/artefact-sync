@@ -5,8 +5,8 @@ import re
 from dataclasses import replace
 from pathlib import Path, PurePosixPath
 
-from .errors import ValidationError
-from .manifest import Collection, DIRECTORY_INDEX_EXTENSIONS, Entry, Manifest, validate_manifest
+from errors import ValidationError
+from manifest import Collection, DIRECTORY_INDEX_EXTENSIONS, Entry, Manifest, validate_manifest
 
 DEFAULT_SECTION = "Artefacts"
 DEFAULT_DESCRIPTION = None
