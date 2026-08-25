@@ -92,6 +92,30 @@ it re-verifies the published URLs and reports.
 
 Approved types are `.html`, `.md`, `.png`, `.jpeg`, `.jpg`, `.ico`, `.pdf`, `.webp`, `.gif`, and `.svg`. SVG files are validated and copied byte-for-byte, never sanitised or rewritten. Unsupported types are excluded. Approved but unlisted files block.
 
+## Adopting an existing artefacts tree
+
+A repository that already publishes an `artefacts/` tree keeps every URL it has published. Work in
+this order, and never delete a published file to resolve a mismatch.
+
+1. Add a `site` block to `artefacts/manifest.json`: `base_url`, `favicon`, and `catalogue` in
+   `inject` mode naming the page that carries the `ARTEFACTS:START` / `ARTEFACTS:END` markers.
+2. Copy the page template the tree was published with to `artefacts/page-template.html`. If it came
+   from a `str.format` template, convert `{name}` to `$name` and collapse `{{` and `}}` to single
+   braces. Placeholders are `$title`, `$favicon`, `$prefix`, `$vendor`, `$markdown`, `$block_start`
+   and `$block_end`; the vendor script tag is `src="$prefix$vendor"`.
+3. Keep the `ignored_sources` rules exactly as they are, including any long prefixes. A rule ending
+   in `/` matches that directory name at any depth, so shortening `docs/prompts/` to `prompts/`
+   silently ignores every other `prompts` directory, and those files then read as deletions.
+   Dotfile directories are the usual gap in an older manifest: `.*` covers them.
+4. Run `plan`. Every entry that reports as changed is a rendering difference to explain before you
+   sync, not after. `manifest.json` always changes on the first run, because absent `date` values
+   are stamped from source modification time.
+5. Run `sync`, then `git diff --name-only HEAD -- artefacts`. Anything beyond
+   `artefacts/manifest.json` means the tool renders that file differently from whatever built it.
+   Stop and read the diff. Use `git diff`, not `git status`: with `core.autocrlf` set, status
+   reports a working-tree line-ending change that commits as nothing.
+6. Run `plan` again. It must report no change groups. That is the proof the adoption converged.
+
 ## Safety
 
 - Treat `plan` as the decision surface. Do not apply blocked plans.

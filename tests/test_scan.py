@@ -44,6 +44,14 @@ class IgnoreTests(unittest.TestCase):
     def test_a_directory_rule_does_not_match_a_sibling_prefix(self) -> None:
         self.assertFalse(scan.is_ignored(PurePosixPath("talk/promptsy.md"), ("talk/prompts/",)))
 
+    def test_a_bare_directory_rule_matches_that_directory_at_any_depth(self) -> None:
+        # The prior art matched a "dir/" rule only at the root, which is why manifests
+        # written by it carry full prefixes like "fde/prompts/". Carrying such a
+        # manifest over and shortening a rule silently widens it. See M4-i.
+        self.assertTrue(scan.is_ignored(PurePosixPath("a/b/prompts/x.md"), ("prompts/",)))
+        self.assertTrue(scan.is_ignored(PurePosixPath("prompts/x.md"), ("prompts/",)))
+        self.assertFalse(scan.is_ignored(PurePosixPath("a/prompts.md"), ("prompts/",)))
+
     def test_an_exact_rule_matches_only_that_file(self) -> None:
         self.assertTrue(scan.is_ignored(PurePosixPath("a/b.md"), ("a/b.md",)))
         self.assertFalse(scan.is_ignored(PurePosixPath("a/bb.md"), ("a/b.md",)))
