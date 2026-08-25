@@ -198,6 +198,26 @@ Dependency direction is unchanged. No module gains an import.
 
 ---
 
+## Task status
+
+Complete, 2026-08-25. All 47 steps ran; evidence in [m4-acceptance.md](m4-acceptance.md).
+
+| Task | Status | Commit | Tests after |
+|---|---|---|---:|
+| 1. Newline-normalising decode, `$vendor` means the vendor path | Done | `0acef4c` | 232 |
+| 2. The embedded block matches what the prior art published | Done | `4bf9102` | 233 |
+| 3. The catalogue emits markup a host page can style | Done | `4f58e3e` | 240 |
+| 4. `head_manifest` survives a HEAD predating the `site` block | Done | `5b0cab9` | 242 |
+| 5. Adoption proof, ignore-rule hazard, `SKILL.md` | Done | `cb711b7` | 246 |
+| 6. The fixture: a probe tree the prior art published | Done | probe `2cec156` | 246 |
+| 7. The gate: the skill reproduces it byte for byte | Done | `6800abc`, probe `6ed9ee1` | 246 |
+| 8. The live probe: publish, verify, `.svg` and `.pdf` | Done | `2592419` | 246 |
+
+246 tests pass on both `python3` (3.13) and `/usr/bin/python3` (3.9.6). The gate result: no
+published byte moved. See "Deviations from this plan" for the six places the plan was wrong.
+
+---
+
 ## Implementation Tasks
 
 ### Task 1: one newline-normalising decode, and `$vendor` means the vendor path
@@ -219,7 +239,7 @@ Dependency direction is unchanged. No module gains an import.
   `render_markdown_page` substitutes `vendor=vendor_path.as_posix()`, so any template must write
   `$prefix$vendor` to get a working relative URL.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Add to `tests/test_render_markdown.py`, inside `class RoundTripTests`:
 
@@ -292,7 +312,7 @@ Add to `tests/test_apply.py`, inside `class RoundTripVerificationTests`:
         self.assertIsNone(a.verify_markdown_round_trip(b"# x\r\n", rendered, "a.md"))
 ```
 
-- [ ] **Step 2: Run them to verify they fail**
+- [x] **Step 2: Run them to verify they fail**
 
 Run: `python3 -m unittest tests.test_render_markdown tests.test_render_html tests.test_apply -v`
 
@@ -303,7 +323,7 @@ Expected: `test_crlf_line_endings_normalise_to_lf` fails in both render modules 
 yet on either side of the comparison. `test_the_shipped_template_climbs_to_the_vendor_file` passes
 for the wrong reason and will keep passing.
 
-- [ ] **Step 3: Add `normalise_source_text` and route the three callers through it**
+- [x] **Step 3: Add `normalise_source_text` and route the three callers through it**
 
 In `artefact_sync/render.py`, add above `escape_markdown_block`:
 
@@ -384,7 +404,7 @@ In `artefact_sync/assets/page-template.html`, change the vendor line:
     <script src="$prefix$vendor"></script>
 ```
 
-- [ ] **Step 4: Run the tests to verify they pass**
+- [x] **Step 4: Run the tests to verify they pass**
 
 Run: `python3 -m unittest tests.test_render_markdown tests.test_render_html tests.test_apply -v`
 Expected: PASS, all of them.
@@ -398,7 +418,7 @@ python3 -m unittest discover -s tests -t . 2>&1 | tail -3
 
 Expected: OK on both, 232 tests.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add artefact_sync/render.py artefact_sync/apply.py \
@@ -424,7 +444,7 @@ git commit -m "fix(render): normalise line endings, and let \$prefix and \$vendo
   now lands after the newline. Any page template must read `markdown-source` and strip one leading
   newline from `textContent`.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Replace `test_the_renderer_reads_the_embedded_source_block_id` and
 `test_the_browser_does_not_strip_a_leading_source_newline` in `tests/test_render_markdown.py`
@@ -465,14 +485,14 @@ rather than on an unreadable block:
             a.verify_markdown_round_trip(b"# x\n", rendered, "a.md")
 ```
 
-- [ ] **Step 2: Run them to verify they fail**
+- [x] **Step 2: Run them to verify they fail**
 
 Run: `python3 -m unittest tests.test_render_markdown.TemplateTests -v`
 Expected: `test_the_page_and_its_reader_agree_on_the_block_id` fails on `id="markdown-source"`,
 `test_the_source_starts_on_the_line_after_the_opening_tag` fails, and
 `test_the_browser_strips_the_leading_source_newline` fails.
 
-- [ ] **Step 3: Change the constant and the shipped template**
+- [x] **Step 3: Change the constant and the shipped template**
 
 In `artefact_sync/render.py`:
 
@@ -490,7 +510,7 @@ In `artefact_sync/assets/page-template.html`, replace the first two lines of the
             var raw = document.getElementById('markdown-source').textContent.replace(/^\n/, '');
 ```
 
-- [ ] **Step 4: Run the tests to verify they pass**
+- [x] **Step 4: Run the tests to verify they pass**
 
 Run: `python3 -m unittest tests.test_render_markdown tests.test_apply -v`
 Expected: PASS. `RoundTripTests::test_a_leading_blank_line_survives_embedding_and_extraction` is the
@@ -506,7 +526,7 @@ python3 -m unittest discover -s tests -t . 2>&1 | tail -3
 
 Expected: OK on both, 233 tests.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add artefact_sync/render.py artefact_sync/assets/page-template.html \
@@ -533,7 +553,7 @@ git commit -m "fix(render): publish the markdown-source block the prior art publ
   `catalogue._invert` are **removed**; nothing outside `tests/test_catalogue.py` calls them.
   `config.py` is not touched — see M4-j.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 In `tests/test_catalogue.py`, replace the `build` helper and add a `collection` helper so a test can
 construct more than one collection:
@@ -647,13 +667,13 @@ class EntryOrderTests(unittest.TestCase):
 
 The module already imports `Collection`; add no imports.
 
-- [ ] **Step 2: Run them to verify they fail**
+- [x] **Step 2: Run them to verify they fail**
 
 Run: `python3 -m unittest tests.test_catalogue -v`
 Expected: every new `MarkupTests`, `CardOrderTests` and `EntryOrderTests` case fails.
 `InjectionTests` and `StandaloneTests` keep passing.
 
-- [ ] **Step 3: Rewrite `render_catalogue`**
+- [x] **Step 3: Rewrite `render_catalogue`**
 
 In `artefact_sync/catalogue.py`, add `import re` to the imports, delete `_invert` and
 `entry_sort_key`, and put this in their place:
@@ -734,7 +754,7 @@ def render_catalogue(manifest: Manifest, site: Site) -> str:
     return "\n".join(lines)
 ```
 
-- [ ] **Step 4: Restyle the bundled standalone catalogue**
+- [x] **Step 4: Restyle the bundled standalone catalogue**
 
 In `artefact_sync/assets/catalogue-template.html`, replace the two class rules with three that match
 the new markup:
@@ -745,7 +765,7 @@ the new markup:
         .card-updated { color: #666; font-size: 0.875rem; }
 ```
 
-- [ ] **Step 5: Run the tests to verify they pass**
+- [x] **Step 5: Run the tests to verify they pass**
 
 Run: `python3 -m unittest tests.test_catalogue -v`
 Expected: PASS.
@@ -761,7 +781,7 @@ Expected: OK on both, 240 tests. `tests/test_m1_end_to_end.py` and `tests/test_m
 assert on hrefs in the catalogue, which the new markup still satisfies. If either fails on markup
 rather than on an href, fix the assertion, not the markup.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add artefact_sync/catalogue.py artefact_sync/assets/catalogue-template.html \
@@ -785,7 +805,7 @@ git commit -m "feat(catalogue): emit styleable markup and order cards by date"
   `check_published_invariants` therefore still sees real `id`/`destination`/`title` values from a
   manifest written before the `site` block existed.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Add to `tests/test_manifest_invariants.py`. That module binds the package as `m`, and already
 imports `tempfile`, `Path` and `make_repo`; add `import json` at the top and nothing else.
@@ -819,7 +839,7 @@ class AdoptionTests(unittest.TestCase):
             self.assertIsNone(m.head_manifest(repo))
 ```
 
-- [ ] **Step 2: Run them to verify they fail**
+- [x] **Step 2: Run them to verify they fail**
 
 Run: `python3 -m unittest tests.test_manifest_invariants -v`
 Expected: `test_a_head_manifest_without_a_site_block_still_freezes_destinations` fails with
@@ -827,7 +847,7 @@ Expected: `test_a_head_manifest_without_a_site_block_still_freezes_destinations`
 `test_an_unreadable_head_manifest_leaves_the_invariants_unchecked` fails with
 `ValidationError: cannot read manifest`.
 
-- [ ] **Step 3: Make the HEAD read lenient**
+- [x] **Step 3: Make the HEAD read lenient**
 
 In `artefact_sync/manifest.py`, replace `head_manifest`:
 
@@ -863,7 +883,7 @@ def head_manifest(repo_root: Path) -> Manifest | None:
 
 `json`, `ValidationError` and `manifest_from_dict` are all already in scope in that module.
 
-- [ ] **Step 4: Run the tests to verify they pass**
+- [x] **Step 4: Run the tests to verify they pass**
 
 Run: `python3 -m unittest tests.test_manifest_invariants -v`
 Expected: PASS.
@@ -877,7 +897,7 @@ python3 -m unittest discover -s tests -t . 2>&1 | tail -3
 
 Expected: OK on both, 242 tests.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add artefact_sync/manifest.py tests/test_manifest_invariants.py
@@ -901,7 +921,7 @@ git commit -m "fix(manifest): adopt a repo whose committed manifest predates the
 this runs the same shape on every commit forever, and it is where the CRLF path stays covered,
 because the real corpus has no CRLF source.
 
-- [ ] **Step 1: Write the adoption test**
+- [x] **Step 1: Write the adoption test**
 
 Create `tests/test_m4_adoption.py`:
 
@@ -990,7 +1010,7 @@ class AdoptionTests(unittest.TestCase):
             self.assertEqual(cli.EXIT_OK, cli.main(["plan", "--pointer", str(pointer)]))
 ```
 
-- [ ] **Step 2: Pin the ignore-rule hazard**
+- [x] **Step 2: Pin the ignore-rule hazard**
 
 Add to `tests/test_scan.py`, beside the existing `is_ignored` cases:
 
@@ -1004,7 +1024,7 @@ Add to `tests/test_scan.py`, beside the existing `is_ignored` cases:
         self.assertFalse(scan.is_ignored(PurePosixPath("a/prompts.md"), ("prompts/",)))
 ```
 
-- [ ] **Step 3: Run both**
+- [x] **Step 3: Run both**
 
 Run: `python3 -m unittest tests.test_m4_adoption tests.test_scan -v`, and again under
 `/usr/bin/python3`.
@@ -1013,7 +1033,7 @@ already has, which the probe exposed and nothing covered. If
 `test_a_published_tree_is_not_rewritten_on_re_adoption` reports a changed file, one of Tasks 1-4 is
 incomplete; do not weaken the assertion.
 
-- [ ] **Step 4: Update `SKILL.md`**
+- [x] **Step 4: Update `SKILL.md`**
 
 Add a new section immediately before `## Safety`:
 
@@ -1043,7 +1063,7 @@ this order, and never delete a published file to resolve a mismatch.
 6. Run `plan` again. It must report no change groups. That is the proof the adoption converged.
 ```
 
-- [ ] **Step 5: Run the whole suite on both interpreters**
+- [x] **Step 5: Run the whole suite on both interpreters**
 
 ```bash
 python3 -m unittest discover -s tests -t . 2>&1 | tail -3
@@ -1053,7 +1073,7 @@ git -C /Users/keli/dev/github-kevinlin/kevinlin.github.io status --short
 
 Expected: OK on both, 246 tests. The third command prints nothing.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add tests/test_m4_adoption.py tests/test_scan.py SKILL.md
@@ -1074,7 +1094,7 @@ git commit -m "test: prove an existing published tree survives adoption unrewrit
 Nothing here runs the skill. The deliverable is a published tree with a known provenance: the prior
 art wrote every byte of it.
 
-- [ ] **Step 1: Inventory the source folder, and re-check the live corpus**
+- [x] **Step 1: Inventory the source folder, and re-check the live corpus**
 
 The corpus is real and mutable, so record what it was. This is the reproducibility substitute for a
 generated fixture, and it belongs in the acceptance record.
@@ -1136,7 +1156,7 @@ git -C "$SITE" status --short          # must still print nothing
 Reference values against live HEAD `280b17e`: 56 entries, 31 collections, 36 protected; 26 `.png`,
 14 `.html`, 9 `.md`, 5 `.jpeg`, 2 `.jpg`; 128 approved, 66 after ignores, 10 unlisted.
 
-- [ ] **Step 2: Create the probe repository shell**
+- [x] **Step 2: Create the probe repository shell**
 
 The prior art cannot run in a repository whose catalogue shell is missing, so the shell comes first.
 It is also the host page whose CSS Task 3's markup has to fit, which is the point.
@@ -1217,7 +1237,7 @@ git -C "$PROBE" ls-files
 
 Expected: the four files above.
 
-- [ ] **Step 3: Publish the probe tree with the prior art**
+- [x] **Step 3: Publish the probe tree with the prior art**
 
 Copy the script out rather than running it in place, so the profile repository is never even a
 working directory, and use `-B` so no bytecode is written anywhere near it.
@@ -1275,7 +1295,7 @@ unbuilt. Note the collection named `coding-agent-adoption` holding both root-lev
 prior art's root-collection naming, the defect M3-b fixed in the skill's proposer. The skill reads
 this manifest rather than re-deriving it, so it inherits the name and nothing diverges.
 
-- [ ] **Step 4: Commit the baseline and check the profile repository**
+- [x] **Step 4: Commit the baseline and check the profile repository**
 
 ```bash
 PROBE=~/dev/github-kevinlin/artefacts-test
@@ -1303,7 +1323,7 @@ Numbers below are what a run produced while this plan was written, with all four
 scratch copy of the package. A mismatch is information: record it, do not adjust an assertion to
 hide it.
 
-- [ ] **Step 1: Write the adoption prep**
+- [x] **Step 1: Write the adoption prep**
 
 Two things the prior art's tree does not carry: a `site` block and a `page-template.html`. Leave both
 uncommitted, so this run also proves Task 4 against a HEAD manifest that has no `site`. No dotfile
@@ -1357,7 +1377,7 @@ print("adoption prep written, uncommitted")
 PY
 ```
 
-- [ ] **Step 2: Run the gate**
+- [x] **Step 2: Run the gate**
 
 ```bash
 python3 -m artefact_sync plan | grep -E '^[A-Z][A-Z ]*\([0-9]+\)|^  '
@@ -1383,7 +1403,7 @@ All 8 warnings are off-site references in the two hand-built HTML pages. Read th
 citation links in the page body, not runtime dependencies, and `plan` warns on any external
 reference by design because it cannot tell the difference.
 
-- [ ] **Step 3: Prove no published byte moved**
+- [x] **Step 3: Prove no published byte moved**
 
 ```bash
 PROBE=~/dev/github-kevinlin/artefacts-test
@@ -1406,7 +1426,7 @@ A	artefacts/page-template.html
 That is the gate. All 6 entry destinations, both protected files and the injected
 `artefacts/index.html` are byte-identical to what the prior art committed.
 
-- [ ] **Step 4: Prove the manifest diff is only what was intended**
+- [x] **Step 4: Prove the manifest diff is only what was intended**
 
 ```bash
 PROBE=~/dev/github-kevinlin/artefacts-test
@@ -1429,7 +1449,7 @@ Expected: `6` dates added, and the remaining lines only the `site` block:
 
 Any other line is a defect: stop and diagnose it.
 
-- [ ] **Step 5: Prove convergence, and validate**
+- [x] **Step 5: Prove convergence, and validate**
 
 ```bash
 python3 -m artefact_sync plan | grep -E '^[A-Z][A-Z ]*\([0-9]+\)'
@@ -1440,7 +1460,7 @@ Expected: `EXCLUDED (1)` and `WARNINGS (8)` and no change group at all, then `va
 run that changes nothing is convergence, and it is the half of the gate an entry-by-entry byte
 comparison cannot show.
 
-- [ ] **Step 6: Commit the adoption on the probe**
+- [x] **Step 6: Commit the adoption on the probe**
 
 ```bash
 PROBE=~/dev/github-kevinlin/artefacts-test
@@ -1451,7 +1471,7 @@ git -C /Users/keli/dev/github-kevinlin/kevinlin.github.io status --short
 
 Expected: one commit touching two files, and the profile repository printing nothing.
 
-- [ ] **Step 7: Write the acceptance record**
+- [x] **Step 7: Write the acceptance record**
 
 Create `docs/specs/m4-acceptance.md`, following the shape of
 [m2-acceptance.md](m2-acceptance.md): a numbered table with `#`, `Command`, `Expected`, `Result`,
@@ -1462,7 +1482,7 @@ gate actually ran against. Record the actual figures, not the predicted ones. St
 paragraph that the gate ran against a probe pair and that `kevinlin.github.io` was neither migrated
 nor modified.
 
-- [ ] **Step 8: Apply the corrections to the design**
+- [x] **Step 8: Apply the corrections to the design**
 
 In `docs/specs/design_artefact-sync.md`, add M4-a to M4-k from this plan's "Corrections to the
 design this plan applies" table to the "Changes to the requirement" table, and make these edits in
@@ -1477,7 +1497,7 @@ place:
   moves out of the ladder and into a follow-on, with `section_links` (M4-j) and the atlas as its two
   unbuilt prerequisites. Correct "57 real entries" to 56 there and in "Testing".
 
-- [ ] **Step 9: Commit**
+- [x] **Step 9: Commit**
 
 ```bash
 cd /Users/keli/dev/ai-practitioner/artefact-sync
@@ -1501,7 +1521,7 @@ git commit -m "docs: record the M4 fidelity gate against a prior-art probe tree"
 This publishes to the internet, on a repository created for the purpose. Nothing here is at risk
 beyond the probe. Do not run it until Task 7 produced exactly its expected output.
 
-- [ ] **Step 1: Install the skill and create the probe repository**
+- [x] **Step 1: Install the skill and create the probe repository**
 
 ```bash
 git -C /Users/keli/dev/ai-practitioner/artefact-sync status --short   # must print nothing
@@ -1532,7 +1552,7 @@ exists, so the manifest, the template and the vendored JS are all left alone. A 
 not finished its first build; wait and re-run. A URL missing the `artefacts-test` segment means
 `base_url` in the manifest is wrong — fix the manifest, not the code.
 
-- [ ] **Step 2: Publish, and verify every URL**
+- [x] **Step 2: Publish, and verify every URL**
 
 ```bash
 time python3 -m artefact_sync publish
@@ -1543,7 +1563,7 @@ verified.` — the base URL, `index.html`, 6 entries and 2 protected files. If T
 been pushed yet, `publish` pushes it, waits for the Pages build and then verifies. Record the
 wall-clock time against M2's 39 seconds for 6 URLs.
 
-- [ ] **Step 3: Check the probe in a browser**
+- [x] **Step 3: Check the probe in a browser**
 
 Open `https://kevinlin.github.io/artefacts-test/artefacts/` and confirm:
 
@@ -1557,7 +1577,7 @@ Open `https://kevinlin.github.io/artefacts-test/artefacts/` and confirm:
   `../../vendor/marked.min.js`, and a blank page here means Task 1 regressed.
 - `mingpt-vs-toy-transformer/infographic.png` loads at full size.
 
-- [ ] **Step 4: Compare served bytes against source bytes**
+- [x] **Step 4: Compare served bytes against source bytes**
 
 M2 did this by hand for two files, and the design records the gap it closes: nothing in `publish`
 proves the bytes GitHub serves equal the bytes pushed.
@@ -1585,7 +1605,7 @@ PY
 Expected: `same` for `mingpt-vs-toy-transformer/infographic.png`, 2,130,205 bytes. A 2 MB image
 round-tripping intact through push and Pages is worth having on the record.
 
-- [ ] **Step 5: Publish what the prior art never could**
+- [x] **Step 5: Publish what the prior art never could**
 
 The gate proves fidelity on the surface both implementations share. The skill's own additions —
 `.svg`, `.pdf`, `.webp`, `.gif`, and the SVG validator — have no prior-art counterpart, so they come
@@ -1632,7 +1652,7 @@ rm ~/Downloads/Claude-Artefacts/dirty.svg
 
 Expected: `BLOCKED` naming `dirty.svg:2` and `script element`, exit 3, and nothing written.
 
-- [ ] **Step 6: Exercise a deletion and reconverge**
+- [x] **Step 6: Exercise a deletion and reconverge**
 
 Delete a file the skill added in Step 5 rather than anything that was in the folder to begin with:
 
@@ -1653,7 +1673,7 @@ python3 -m artefact_sync publish
 
 Expected: `no changes.` and `nothing to publish; 11 published URLs verified.`
 
-- [ ] **Step 7: Finish the record and commit**
+- [x] **Step 7: Finish the record and commit**
 
 Fill in the remaining rows of `docs/specs/m4-acceptance.md` from Steps 1-6, write its "What the run
 found" and "Result" sections, set this plan's status line, and fill in "Deviations from this plan"
