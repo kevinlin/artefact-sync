@@ -73,3 +73,10 @@ class ExternalReferenceTests(unittest.TestCase):
 
     def test_an_inline_data_url_is_not_off_site(self) -> None:
         self.assertEqual((), render.external_references('<link href="data:,">\n'))
+
+    def test_a_plain_hyperlink_is_not_a_fetched_asset(self) -> None:
+        self.assertEqual((), render.external_references('<a href="https://example.com/x">x</a>\n'))
+
+    def test_a_stylesheet_link_is_a_fetched_asset(self) -> None:
+        text = '<link rel="stylesheet" href="https://fonts.example/css2?family=X">\n'
+        self.assertEqual(1, len(render.external_references(text)))

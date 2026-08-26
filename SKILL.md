@@ -2,7 +2,7 @@
 name: artefact-sync
 description: One-way sync a local folder into the artefacts tree of a configured GitHub Pages repository. Use when planning, applying, or validating published artefacts while preserving existing public URLs.
 metadata:
-  version: 1.0.0
+  version: 1.1.0
 ---
 
 # artefact-sync
@@ -30,8 +30,10 @@ The two-step proposal flow prevents a newly discovered file from becoming public
 
 - `secret`: a filename containing `prompt`, `draft`, `internal` or `client`, or a line matching an
   API-key, AWS-key, GitHub-token or private-key shape. Read the named line before publishing.
-- `external`: a published HTML page loads something off-site at runtime. Vendor it into
-  `artefacts/vendor/` and add a `replacements` entry if the page must keep working offline.
+- `external`: a published HTML page fetches an off-site asset to render — a `<script src>`, a
+  `<link href>` stylesheet or font, an image or iframe. Vendor it into `artefacts/vendor/` and add a
+  `replacements` entry if the page must keep working offline. Plain `<a href>` links out are not
+  warned about.
 - `orphan`: a file in `artefacts/` belonging to no manifest entry. Never deleted, never rewritten.
 - `size`: a new public file over 10 MB.
 

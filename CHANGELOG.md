@@ -7,6 +7,26 @@ deviations, and the corrections each milestone applied back to the design.
 
 ---
 
+## 1.1.0 — 2026-08-26
+
+The `external` warning now reports only assets the browser fetches to render a page. Citation links
+in page bodies no longer drown out the CDN scripts and remote fonts that actually make a published
+page depend on a third party. 247 tests pass on 3.9.6 and 3.13.
+
+- `render.external_references` parses the HTML with `html.parser` instead of matching
+  `src=`/`href=` line by line, so it knows which tag an attribute sits on. It reports `src` on
+  `script`, `img`, `iframe`, `embed`, `source`, `video`, `audio`, `track` and `input`, and `href`
+  only on `link`. Every other `href` — `<a>` above all — is a navigation link, not a load, and is
+  now silent.
+- Line numbers come from the tag's opening line rather than the line the attribute happens to land
+  on. For a tag split across lines the reported line moves to where the element starts.
+- The off-site test is unchanged: absolute and protocol-relative URLs count, `data:`, `mailto:`,
+  `tel:` and fragments do not.
+- `plan`, `sync`, `add` and `validate` all share this function, so all four narrowed together.
+  Nothing is blocked that was not blocked before; only the warning list shrank.
+
+---
+
 ## 1.0.0 — 2026-08-25
 
 First public release. M1 through M4 built it: the portable core, `publish`, `add`, and a release

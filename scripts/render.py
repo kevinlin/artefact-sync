@@ -4,6 +4,7 @@ import difflib
 import html
 import re
 import string
+from html.parser import HTMLParser
 from pathlib import Path, PurePosixPath
 
 from config import ASSETS, Context, Site
@@ -17,7 +18,11 @@ EXISTING_ICON_LINK = re.compile(r"""<link\b[^>]*\brel=["']?[^"'>]*\bicon\b""", r
 HEAD_OPEN = re.compile(r"<head\b[^>]*>", re.I)
 DOCTYPE = re.compile(r"^\s*<!doctype[^>]*>", re.I)
 TRAILING_SPACE = re.compile(r"[ \t]+(?=\r?$)", re.MULTILINE)
-_REFERENCE = re.compile(r"""\b(?:src|href)\s*=\s*["']([^"']+)["']""", re.I)
+# Only assets the browser fetches to render the page count as external loads.
+# `href` is an asset on <link> and a plain navigation link everywhere else.
+_ASSET_SRC_TAGS = frozenset(
+    {"script", "img", "iframe", "embed", "source", "video", "audio", "track", "input"}
+)
 
 
 def normalise_source_text(source_bytes: bytes, label: str) -> str:
@@ -148,15 +153,36 @@ def transform_html(source_bytes: bytes, entry: Entry, site: Site) -> bytes:
     return text.encode("utf-8")
 
 
+class _AssetCollector(HTMLParser):
+    """Collect off-site URLs the browser fetches to render the page."""
+
+    def __init__(self) -> None:
+        super().__init__(convert_charrefs=True)
+        self.found: list[tuple[int, str]] = []
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        attribute = "href" if tag == "link" else "src" if tag in _ASSET_SRC_TAGS else None
+        if attribute is None:
+            return
+        for name, value in attrs:
+            if name.lower() != attribute or not value:
+                continue
+            url = value.strip()
+            if not (url.startswith("//") or re.match(r"^[a-z][a-z0-9+.-]*:", url, re.I)):
+                continue
+            if url.lower().startswith(("data:", "mailto:", "tel:", "#")):
+                continue
+            self.found.append((self.getpos()[0], url))
+
+
 def external_references(html_text: str) -> tuple[tuple[int, str], ...]:
-    found = []
-    for number, line in enumerate(html_text.splitlines(), start=1):
-        for match in _REFERENCE.finditer(line):
-            url = match.group(1).strip()
-            if url.startswith("//") or re.match(r"^[a-z][a-z0-9+.-]*:", url, re.I):
-                if not url.lower().startswith(("data:", "mailto:", "tel:", "#")):
-                    found.append((number, url))
-    return tuple(found)
+    collector = _AssetCollector()
+    try:
+        collector.feed(html_text)
+        collector.close()
+    except AssertionError:  # malformed markup: report what was parsed so far
+        pass
+    return tuple(collector.found)
 
 
 def build_desired_files(
