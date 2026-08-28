@@ -27,7 +27,7 @@ class ValidateTests(unittest.TestCase):
     def test_validate_rejects_inject_mode_without_a_catalogue_page(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
-            site = Site("https://x.example/artefacts/", "", "inject", None)
+            site = Site("https://x.example/artefacts/", "", "", "inject", None)
             context = Context(root, root / "source", root / "artefacts", site)
             current = Manifest(1, site, (), (), (), ())
             with self.assertRaises(ValidationError) as caught:

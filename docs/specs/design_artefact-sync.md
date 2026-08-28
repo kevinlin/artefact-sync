@@ -81,7 +81,8 @@ Pointer, `~/.config/artefact-sync/config.json`:
 Manifest, `<repo>/artefacts/manifest.json`. Existing keys unchanged, one new sibling:
 
     {version, site, protected_files, ignored_sources, collections, entries}
-    site:  {base_url, favicon, catalogue: {mode: "standalone"} | {mode: "inject", page}}
+    site:  {base_url, favicon, analytics_id,
+            catalogue: {mode: "standalone"} | {mode: "inject", page}}
     entry: {id, source, destination, title, collection, order, replacements,
             description?, date?}
     collection: {id, title, description?, section, section_order, order}

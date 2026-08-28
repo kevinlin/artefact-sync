@@ -7,6 +7,26 @@ deviations, and the corrections each milestone applied back to the design.
 
 ---
 
+## 1.2.0 — 2026-08-28
+
+Generated pages can carry a Google Analytics tag, configured once in the manifest. 254 tests pass on
+3.9.6 and 3.13.
+
+- `site.analytics_id` in `artefacts/manifest.json` takes a GA4 measurement ID. When set,
+  `render.ensure_analytics` puts the gtag snippet in the `<head>` of every generated page — synced
+  HTML, rendered Markdown, and the standalone catalogue. Empty by default, so nothing changes for a
+  tree that does not want it.
+- The snippet is injected after rendering rather than through a template placeholder, so a repo that
+  already has its own `artefacts/page-template.html` from an earlier `init` gets analytics without
+  editing that copy.
+- A page that already loads `googletagmanager.com` keeps its own tag, and neither `plan` nor
+  `validate` reports the analytics host as an `external` warning: it is configured, not an unnoticed
+  third-party load.
+- `render.ensure_favicon` and `ensure_analytics` now share `_insert_into_head`. Favicon placement is
+  unchanged, so no published page moves.
+
+---
+
 ## 1.1.1 — 2026-08-28
 
 A republished artefact now carries the date of the version on the page, and a manifest path that

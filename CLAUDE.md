@@ -12,7 +12,7 @@ too, or the skill documents something it no longer does.
 ## Commands
 
 ```bash
-# whole suite (245 tests, ~11s). Run on BOTH interpreters before calling anything done.
+# whole suite (254 tests, ~11s). Run on BOTH interpreters before calling anything done.
 python3 -m unittest discover -s tests -t .
 /usr/bin/python3 -m unittest discover -s tests -t .   # macOS stock 3.9.6 — the version floor
 

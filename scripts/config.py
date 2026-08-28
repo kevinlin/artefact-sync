@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
 
@@ -15,6 +16,8 @@ POINTER_PATH = Path.home() / ".config" / "artefact-sync" / "config.json"
 ARTEFACTS_DIRNAME = "artefacts"
 PUSH_MODES = ("direct", "branch")
 DEFAULT_FAVICON = "<link rel=\"icon\" href=\"data:,\">"
+# GA4 measurement IDs are "G-" followed by an uppercase alphanumeric stream token.
+ANALYTICS_ID = re.compile(r"^G-[A-Z0-9]{4,}$")
 
 
 @dataclass(frozen=True)
@@ -28,6 +31,7 @@ class Pointer:
 class Site:
     base_url: str
     favicon: str
+    analytics_id: str
     catalogue_mode: str
     catalogue_page: PurePosixPath | None
 
@@ -71,6 +75,12 @@ def site_from_dict(raw: dict) -> Site:
     base_url = raw.get("base_url")
     if not isinstance(base_url, str) or not base_url.endswith("/"):
         raise ConfigError("site.base_url must be a URL ending in '/'")
+    analytics_id = raw.get("analytics_id", "")
+    if not isinstance(analytics_id, str) or (analytics_id and not ANALYTICS_ID.match(analytics_id)):
+        raise ConfigError(
+            "site.analytics_id must be a GA4 measurement ID like 'G-ABCD1234XY', "
+            'or "" to publish pages without analytics'
+        )
     catalogue = raw.get("catalogue") or {"mode": "standalone"}
     if not isinstance(catalogue, dict):
         raise ConfigError("site.catalogue must be an object")
@@ -91,6 +101,7 @@ def site_from_dict(raw: dict) -> Site:
     return Site(
         base_url=base_url,
         favicon=raw.get("favicon", DEFAULT_FAVICON),
+        analytics_id=analytics_id,
         catalogue_mode=mode,
         catalogue_page=page_path,
     )
@@ -100,7 +111,12 @@ def site_to_dict(site: Site) -> dict:
     catalogue: dict = {"mode": site.catalogue_mode}
     if site.catalogue_page is not None:
         catalogue["page"] = site.catalogue_page.as_posix()
-    return {"base_url": site.base_url, "favicon": site.favicon, "catalogue": catalogue}
+    return {
+        "base_url": site.base_url,
+        "favicon": site.favicon,
+        "analytics_id": site.analytics_id,
+        "catalogue": catalogue,
+    }
 
 
 def build_context(pointer: Pointer, site: Site) -> Context:

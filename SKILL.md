@@ -2,7 +2,7 @@
 name: artefact-sync
 description: One-way sync a local folder into the artefacts tree of a configured GitHub Pages repository. Use when planning, applying, or validating published artefacts while preserving existing public URLs.
 metadata:
-  version: 1.1.1
+  version: 1.2.0
 ---
 
 # artefact-sync
@@ -77,7 +77,7 @@ it re-verifies the published URLs and reports.
 ```text
 {
   version,
-  site: {base_url, favicon, catalogue: {mode, page?}},
+  site: {base_url, favicon, analytics_id, catalogue: {mode, page?}},
   protected_files,
   ignored_sources,
   collections: [{id, title, description?, section, section_order, order}],
@@ -88,6 +88,12 @@ it re-verifies the published URLs and reports.
 
 `source` is relative to the configured source folder. `destination` is relative to `artefacts/` and is frozen after publication. HTML replacements are ordered raw-text substitutions. `date` values are stamped from the source file's modification time: on the first sync, and again whenever a sync republishes that artefact, so a published date always reflects the version on the page.
 
+`site.analytics_id` is a GA4 measurement ID such as `G-ABCD1234XY`. When it is set, every page
+this tool generates — synced HTML, rendered Markdown, and the standalone catalogue — carries the
+gtag snippet in its `<head>`. A page that already loads `googletagmanager.com` keeps its own tag.
+Leave `analytics_id` as `""` to publish without analytics. In `inject` catalogue mode the host page
+is yours, so add the tag to it yourself.
+
 Approved types are `.html`, `.md`, `.png`, `.jpeg`, `.jpg`, `.ico`, `.pdf`, `.webp`, `.gif`, and `.svg`. SVG files are validated and copied byte-for-byte, never sanitised or rewritten. Unsupported types are excluded. Approved but unlisted files block.
 
 ## Adopting an existing artefacts tree
@@ -95,8 +101,10 @@ Approved types are `.html`, `.md`, `.png`, `.jpeg`, `.jpg`, `.ico`, `.pdf`, `.we
 A repository that already publishes an `artefacts/` tree keeps every URL it has published. Work in
 this order, and never delete a published file to resolve a mismatch.
 
-1. Add a `site` block to `artefacts/manifest.json`: `base_url`, `favicon`, and `catalogue` in
-   `inject` mode naming the page that carries the `ARTEFACTS:START` / `ARTEFACTS:END` markers.
+1. Add a `site` block to `artefacts/manifest.json`: `base_url`, `favicon`, `analytics_id`, and
+   `catalogue` in `inject` mode naming the page that carries the `ARTEFACTS:START` /
+   `ARTEFACTS:END` markers. If the tree already carries an analytics tag in its own pages, leave
+   `analytics_id` empty so `plan` reports no rendering difference.
 2. Copy the page template the tree was published with to `artefacts/page-template.html`. If it came
    from a `str.format` template, convert `{name}` to `$name` and collapse `{{` and `}}` to single
    braces. Placeholders are `$title`, `$favicon`, `$prefix`, `$vendor`, `$markdown`, `$block_start`

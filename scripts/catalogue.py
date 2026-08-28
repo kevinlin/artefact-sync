@@ -7,6 +7,7 @@ import string
 from config import ASSETS, Site
 from errors import ValidationError
 from manifest import Entry, Manifest
+from render import ensure_analytics
 
 CATALOGUE_START = "<!-- ARTEFACTS:START -->"
 CATALOGUE_END = "<!-- ARTEFACTS:END -->"
@@ -113,4 +114,4 @@ def render_standalone_catalogue(manifest: Manifest, site: Site) -> bytes:
         favicon=site.favicon,
         catalogue=render_catalogue(manifest, site),
     )
-    return document.encode("utf-8")
+    return ensure_analytics(document, site.analytics_id).encode("utf-8")

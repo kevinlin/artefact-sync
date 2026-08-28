@@ -78,7 +78,7 @@ class CatalogueConfigTests(unittest.TestCase):
             root = Path(tmp)
             repo = make_repo(root, {"README.md": b"x\n"})
             source = make_source_tree(root, {})
-            site = Site("https://x.example/artefacts/", "", "inject", None)
+            site = Site("https://x.example/artefacts/", "", "", "inject", None)
             context = Context(repo, source, repo / "artefacts", site)
             current = Manifest(1, site, (), (), (), ())
             with self.assertRaises(ValidationError) as caught:

@@ -56,11 +56,22 @@ class SiteTests(unittest.TestCase):
         with self.assertRaises(ConfigError):
             config.site_from_dict({"base_url": "https://x.example/artefacts"})
 
+    def test_analytics_id_must_look_like_a_ga4_measurement_id(self) -> None:
+        with self.assertRaises(ConfigError):
+            config.site_from_dict(
+                {"base_url": "https://x.example/artefacts/", "analytics_id": "UA-12345-1"}
+            )
+
+    def test_analytics_is_off_when_the_manifest_says_nothing(self) -> None:
+        site = config.site_from_dict({"base_url": "https://x.example/artefacts/"})
+        self.assertEqual("", site.analytics_id)
+
     def test_site_survives_a_json_round_trip(self) -> None:
         site = config.site_from_dict(
             {
                 "base_url": "https://x.example/artefacts/",
                 "favicon": "<link rel='icon' href='data:,'>",
+                "analytics_id": "G-ABCD1234XY",
                 "catalogue": {"mode": "inject", "page": "index.html"},
             }
         )

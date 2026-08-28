@@ -46,6 +46,38 @@ class TransformTests(unittest.TestCase):
         self.assertIn(b"own.png", out)
         self.assertEqual(1, out.count(b'rel="icon"'))
 
+    def test_injects_the_analytics_tag_when_an_id_is_configured(self) -> None:
+        site = site_from_dict(
+            {"base_url": "https://x.example/artefacts/", "analytics_id": "G-ABCD1234XY"}
+        )
+        out = render.transform_html(b"<html><head></head><body></body></html>", entry(), site)
+        self.assertIn(b"googletagmanager.com/gtag/js?id=G-ABCD1234XY", out)
+        self.assertIn(b"gtag('config', 'G-ABCD1234XY')", out)
+
+    def test_no_analytics_tag_without_a_configured_id(self) -> None:
+        out = render.transform_html(b"<html><head></head><body></body></html>", entry(), SITE)
+        self.assertNotIn(b"googletagmanager", out)
+
+    def test_leaves_a_page_that_already_has_an_analytics_tag_alone(self) -> None:
+        site = site_from_dict(
+            {"base_url": "https://x.example/artefacts/", "analytics_id": "G-ABCD1234XY"}
+        )
+        source = (
+            b"<html><head>"
+            b'<script async src="https://www.googletagmanager.com/gtag/js?id=G-OWN00000"></script>'
+            b"</head><body></body></html>"
+        )
+        out = render.transform_html(source, entry(), site)
+        self.assertEqual(1, out.count(b"gtag/js"))
+        self.assertIn(b"G-OWN00000", out)
+
+    def test_the_injected_analytics_tag_is_not_reported_as_an_external_load(self) -> None:
+        site = site_from_dict(
+            {"base_url": "https://x.example/artefacts/", "analytics_id": "G-ABCD1234XY"}
+        )
+        out = render.transform_html(b"<html><head></head><body></body></html>", entry(), site)
+        self.assertEqual((), render.external_references(out.decode("utf-8")))
+
     def test_strips_trailing_whitespace(self) -> None:
         out = render.transform_html(b"<html>   \n<body></body></html>\n", entry(), SITE)
         self.assertNotIn(b"   \n", out)

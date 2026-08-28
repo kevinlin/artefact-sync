@@ -21,6 +21,7 @@ MINIMUM_BYTES = {TEMPLATE_NAME: 200, CATALOGUE_TEMPLATE_NAME: 200, VENDOR_NAME: 
 PROBE_SITE = Site(
     base_url="https://probe.invalid/artefacts/",
     favicon=DEFAULT_FAVICON,
+    analytics_id="",
     catalogue_mode="standalone",
     catalogue_page=None,
 )

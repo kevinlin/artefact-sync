@@ -114,6 +114,11 @@ an answer on the same screen.
 | `~/.config/artefact-sync/config.json` | `repo`, `source`, `push` (machine-local, survives `git pull`) |
 | `<your repo>/artefacts/` | `manifest.json`, `page-template.html`, `index.html`, `vendor/`, the published tree |
 
+Site-wide settings live in `artefacts/manifest.json` under `site`: the public `base_url`, the
+`favicon` markup, and `analytics_id`. Set `analytics_id` to your GA4 measurement ID
+(`G-ABCD1234XY`) and every page the tool generates gets the gtag snippet in its `<head>`; leave it
+empty for no analytics.
+
 The manifest lives with the site on purpose. Reinstall the skill, switch laptops, delete
 `~/.config`. None of it can break a link you already published.
 

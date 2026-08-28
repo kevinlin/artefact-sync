@@ -18,6 +18,7 @@ EXISTING_ICON_LINK = re.compile(r"""<link\b[^>]*\brel=["']?[^"'>]*\bicon\b""", r
 HEAD_OPEN = re.compile(r"<head\b[^>]*>", re.I)
 DOCTYPE = re.compile(r"^\s*<!doctype[^>]*>", re.I)
 TRAILING_SPACE = re.compile(r"[ \t]+(?=\r?$)", re.MULTILINE)
+ANALYTICS_HOST = "www.googletagmanager.com"
 # Only assets the browser fetches to render the page count as external loads.
 # `href` is an asset on <link> and a plain navigation link everywhere else.
 _ASSET_SRC_TAGS = frozenset(
@@ -101,7 +102,7 @@ def render_markdown_page(
         block_start=BLOCK_START,
         block_end=BLOCK_END,
     )
-    return document.encode("utf-8")
+    return ensure_analytics(document, site.analytics_id).encode("utf-8")
 
 
 def markdown_diff(published: bytes | None, rendered: bytes, limit: int = 40) -> str:
@@ -129,16 +130,42 @@ def markdown_diff(published: bytes | None, rendered: bytes, limit: int = 40) -> 
     return "\n".join(lines)
 
 
-def ensure_favicon(text: str, favicon: str) -> str:
-    if EXISTING_ICON_LINK.search(text):
-        return text
+def _insert_into_head(text: str, block: str) -> str:
     head = HEAD_OPEN.search(text)
     if head is not None:
-        return f"{text[: head.end()]}\n    {favicon}{text[head.end() :]}"
+        return f"{text[: head.end()]}\n    {block}{text[head.end() :]}"
     doctype = DOCTYPE.match(text)
     prefix = f"{text[: doctype.end()]}\n" if doctype else ""
     rest = text[doctype.end() :] if doctype else text
-    return f"{prefix}{favicon}\n{rest.lstrip()}"
+    return f"{prefix}{block}\n{rest.lstrip()}"
+
+
+def ensure_favicon(text: str, favicon: str) -> str:
+    if EXISTING_ICON_LINK.search(text):
+        return text
+    return _insert_into_head(text, favicon)
+
+
+def analytics_snippet(measurement_id: str) -> str:
+    """The standard GA4 gtag block, or nothing when analytics is not configured."""
+    if not measurement_id:
+        return ""
+    return (
+        f'<script async src="https://{ANALYTICS_HOST}/gtag/js?id={measurement_id}"></script>\n'
+        "    <script>\n"
+        "        window.dataLayer = window.dataLayer || [];\n"
+        "        function gtag() { dataLayer.push(arguments); }\n"
+        "        gtag('js', new Date());\n"
+        f"        gtag('config', '{measurement_id}');\n"
+        "    </script>"
+    )
+
+
+def ensure_analytics(text: str, measurement_id: str) -> str:
+    """Insert the analytics tag once. A page that already carries one keeps its own."""
+    if not measurement_id or ANALYTICS_HOST in text:
+        return text
+    return _insert_into_head(text, analytics_snippet(measurement_id))
 
 
 def transform_html(source_bytes: bytes, entry: Entry, site: Site) -> bytes:
@@ -150,6 +177,7 @@ def transform_html(source_bytes: bytes, entry: Entry, site: Site) -> bytes:
         text = new.join(parts)
     text = TRAILING_SPACE.sub("", text)
     text = ensure_favicon(text, site.favicon)
+    text = ensure_analytics(text, site.analytics_id)
     return text.encode("utf-8")
 
 
@@ -171,6 +199,8 @@ class _AssetCollector(HTMLParser):
             if not (url.startswith("//") or re.match(r"^[a-z][a-z0-9+.-]*:", url, re.I)):
                 continue
             if url.lower().startswith(("data:", "mailto:", "tel:", "#")):
+                continue
+            if ANALYTICS_HOST in url:  # the analytics tag is configured, not an unnoticed load
                 continue
             self.found.append((self.getpos()[0], url))
 
