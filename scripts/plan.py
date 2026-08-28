@@ -71,11 +71,20 @@ def scan_published_tree(artefacts_root) -> set[PurePosixPath]:
     return published
 
 
-def _stamp_missing_dates(manifest: Manifest, context: Context) -> Manifest:
+def _published_bytes(context: Context, destination: PurePosixPath) -> bytes | None:
+    path = context.artefacts_root / destination.as_posix()
+    return path.read_bytes() if path.is_file() else None
+
+
+def _stamp_dates(
+    manifest: Manifest, context: Context, republished: set[PurePosixPath]
+) -> Manifest:
+    """Date an entry from its source mtime when it has no date or is being republished."""
     entries = []
     for entry in manifest.entries:
         source = context.source_root / entry.source.as_posix()
-        if entry.date is None and source.is_file():
+        restamp = entry.date is None or entry.destination in republished
+        if restamp and source.is_file():
             try:
                 stamp = date.fromtimestamp(source.stat().st_mtime).isoformat()
             except OSError:
@@ -180,7 +189,6 @@ def create_sync_plan(
     next_manifest = propose.propose_manifest_additions(
         declared, unlisted, renames, context.source_root
     )
-    next_manifest = _stamp_missing_dates(next_manifest, context)
     manifest_module.check_published_invariants(
         next_manifest, manifest_module.head_manifest(context.repo_root)
     )
@@ -205,6 +213,14 @@ def create_sync_plan(
 
     template = render.load_template(context.artefacts_root)
     desired_files = render.build_desired_files(context, next_manifest, template)
+    # Dates only reach manifest.json and the catalogue, never the artefact pages, so they
+    # can settle once the pages are rendered and it is clear which ones actually change.
+    republished = {
+        destination
+        for destination, content in desired_files.items()
+        if _published_bytes(context, destination) not in (None, content)
+    }
+    next_manifest = _stamp_dates(next_manifest, context, republished)
     if context.site.catalogue_mode == "standalone":
         catalogue_path = PurePosixPath(manifest_module.CATALOGUE_NAME)
         desired_files[catalogue_path] = catalogue.render_standalone_catalogue(
@@ -229,8 +245,7 @@ def create_sync_plan(
     source_by_destination = {entry.destination: entry.source for entry in next_manifest.entries}
     changes = []
     for destination, content in sorted(desired_files.items(), key=lambda item: str(item[0])):
-        path = context.artefacts_root / destination.as_posix()
-        current = path.read_bytes() if path.is_file() else None
+        current = _published_bytes(context, destination)
         if current == content:
             continue
         kind = "add" if current is None else "update"

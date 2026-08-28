@@ -86,7 +86,7 @@ it re-verifies the published URLs and reports.
 }
 ```
 
-`source` is relative to the configured source folder. `destination` is relative to `artefacts/` and is frozen after publication. HTML replacements are ordered raw-text substitutions. Missing `date` values are stamped from source modification time on the first sync and then stored in the manifest.
+`source` is relative to the configured source folder. `destination` is relative to `artefacts/` and is frozen after publication. HTML replacements are ordered raw-text substitutions. `date` values are stamped from the source file's modification time: on the first sync, and again whenever a sync republishes that artefact, so a published date always reflects the version on the page.
 
 Approved types are `.html`, `.md`, `.png`, `.jpeg`, `.jpg`, `.ico`, `.pdf`, `.webp`, `.gif`, and `.svg`. SVG files are validated and copied byte-for-byte, never sanitised or rewritten. Unsupported types are excluded. Approved but unlisted files block.
 

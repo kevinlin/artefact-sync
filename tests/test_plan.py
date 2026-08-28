@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import os
 import tempfile
 import unittest
+from datetime import date
 from pathlib import Path, PurePosixPath
 
 import cli, manifest as manifest_module, plan as p
@@ -125,6 +127,38 @@ class OrphanNoteTests(unittest.TestCase):
             ["artefacts/redirect.html"],
             [note.where for note in sync_plan.notes if note.kind == "orphan"],
         )
+
+
+class DateStampTests(unittest.TestCase):
+    """A republished artefact is redated from its source; an untouched one keeps its date."""
+
+    def _synced(self, tmp: str) -> tuple[Path, Path]:
+        root = Path(tmp)
+        repo = make_repo(root, {"README.md": b"x\n"})
+        source = make_source_tree(root, {"note.md": b"# note\n", "still.md": b"# still\n"})
+        pointer = root / "pointer.json"
+        cli.main(["init", "--pointer", str(pointer),
+                  "--repo", str(repo), "--source", str(source)])
+        cli.main(["plan", "--pointer", str(pointer)])
+        cli.main(["sync", "--pointer", str(pointer), "--yes"])
+        return source, pointer
+
+    def test_an_updated_artefact_is_redated_and_an_untouched_one_is_not(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            source, pointer = self._synced(tmp)
+            context = cli.resolve_context(cli.parse_args(["plan", "--pointer", str(pointer)]))
+            before = {entry.id: entry.date
+                      for entry in manifest_module.load_manifest(context.artefacts_root).entries}
+            changed = source / "note.md"
+            changed.write_bytes(b"# note, revised\n")
+            os.utime(changed, (1_800_000_000, 1_800_000_000))
+            sync_plan = p.create_sync_plan(
+                context, manifest_module.load_manifest(context.artefacts_root))
+        dates = {entry.id: entry.date for entry in sync_plan.next_manifest.entries}
+        expected = date.fromtimestamp(1_800_000_000).isoformat()
+        self.assertEqual(expected, dates["note"])
+        self.assertNotEqual(before["note"], dates["note"])
+        self.assertEqual(before["still"], dates["still"])
 
 
 class ExcludedBlockTests(unittest.TestCase):
