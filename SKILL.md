@@ -2,7 +2,7 @@
 name: artefact-sync
 description: One-way sync a local folder into the artefacts tree of a configured GitHub Pages repository. Use when planning, applying, or validating published artefacts while preserving existing public URLs.
 metadata:
-  version: 1.1.0
+  version: 1.1.1
 ---
 
 # artefact-sync

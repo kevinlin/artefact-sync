@@ -7,6 +7,26 @@ deviations, and the corrections each milestone applied back to the design.
 
 ---
 
+## 1.1.1 — 2026-08-28
+
+A republished artefact now carries the date of the version on the page, and a manifest path that
+fails validation says which path it was. 248 tests pass on 3.9.6 and 3.13.
+
+- `plan._stamp_missing_dates` became `plan._stamp_dates`, and stamps an entry's `date` from the
+  source file's modification time both when the entry has no date and when this run republishes it.
+  A date left over from an earlier version of the page used to sit there unchanged, so the catalogue
+  claimed a freshness the page no longer had.
+- The stamping moved below `render.build_desired_files` in `plan.create_sync_plan`, which is where a
+  run first knows which destinations actually change. Dates reach `manifest.json` and the catalogue
+  and nothing else, so no page that decides the answer is rendered from it.
+- An entry whose rendered bytes match what is published keeps its date, hand-corrected ones
+  included. A run that changes nothing still changes nothing.
+- `manifest._validate_path_components` names the offending path and the first failing component.
+  `destination must be lowercase kebab-case` and `protected file must use a lowercase safe path`
+  were both raised bare, leaving a bad entry anywhere in the manifest with no clue which one it was.
+
+---
+
 ## 1.1.0 — 2026-08-26
 
 The `external` warning now reports only assets the browser fetches to render a page. Citation links
