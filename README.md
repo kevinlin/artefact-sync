@@ -9,6 +9,14 @@
   and never changes a URL you already shared.
 </p>
 
+<p align="center">
+  <a href="assets/artefact-sync-promo.mp4">
+    <img src="assets/artefact-sync-promo-poster.png" alt="artefact-sync in 30 seconds: rename a file, the URL stays" width="720">
+  </a>
+  <br>
+  <sub><a href="assets/artefact-sync-promo.mp4">Watch the 30-second video</a></sub>
+</p>
+
 ---
 
 ## What this is for
