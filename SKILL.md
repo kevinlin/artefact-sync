@@ -1,6 +1,7 @@
 ---
 name: artefact-sync
 description: One-way sync a local folder into the artefacts tree of a configured GitHub Pages repository. Use when planning, applying, or validating published artefacts while preserving existing public URLs.
+allowed-tools: Read, Bash(python3:*)
 metadata:
   version: 1.2.1
 ---
@@ -19,7 +20,7 @@ python3 "$HOME/.claude/skills/artefact-sync/scripts/artefact_sync.py" <command>
 
 1. Run `init --repo <path> --source <path>` once. It writes the machine-local pointer and creates missing control files without replacing an existing manifest.
 2. Run `plan`. Read every full URL, warning, deletion, and blocked item before continuing.
-3. If `plan` exits 3 for unseen approved sources, inspect the proposed entries written to `artefacts/manifest.json`. This first run writes only the manifest. Run `sync` only after the destinations, titles, collections, and warnings are acceptable.
+3. If `plan` exits 3 for unseen approved sources, show the user the proposed entries written to `artefacts/manifest.json` (each destination URL, title and collection) and the warnings, then stop. This first run writes only the manifest. Run `sync` only after the user approves the proposal. A request to "update" or "sync" made before the proposal existed is not that approval.
 4. Run `sync`, type `yes` when prompted, then run `validate`.
 
 The two-step proposal flow prevents a newly discovered file from becoming public before its URL and catalogue metadata are reviewed. Propose metadata only for sources absent from the manifest. Never re-title or re-slug an existing entry. A published entry keeps its `id`, `title`, and `destination`; a confirmed source rename takes the new `source` while retaining those fields.
@@ -132,7 +133,7 @@ this order, and never delete a published file to resolve a mismatch.
 
 ## Safety
 
-- Treat `plan` as the decision surface. Do not apply blocked plans.
+- Treat `plan` as the decision surface. Do not apply blocked plans, and do not approve a proposal on the user's behalf.
 - Do not delete or rewrite unmanaged files. Orphans are warnings only.
 - Do not change an existing title or destination to resolve a proposal conflict.
 - Do not force-push or attempt automatic rollback.

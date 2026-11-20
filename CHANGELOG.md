@@ -7,6 +7,21 @@ deviations, and the corrections each milestone applied back to the design.
 
 ---
 
+## Unreleased
+
+- `SKILL.md`: after a blocked `plan`, the agent shows the proposed entries and stops until the user
+  approves them. The old wording ("only after ... are acceptable") let an agent approve its own
+  proposal and sync it, which the new eval suite caught.
+- `SKILL.md` declares `allowed-tools: Read, Bash(python3:*)`. While the skill is active, Claude Code
+  runs `python3` commands, `publish` included, without a permission prompt. The skill's own rule to
+  state irreversibility and get a go-ahead before `publish` is now the only stop.
+- New eval suite under `evals/` for SkillGantry's evaluate gate: eight cases, each in an isolated
+  home with a fixture Pages repo that has no remote, graded from a log of the real CLI calls.
+- `.skillspector-baseline.yaml` records the reviewed false positives from the security gate, each
+  with its reason.
+
+---
+
 ## 1.2.1 — 2026-11-20
 
 Fewer false warnings from `plan` and `validate`. 265 tests pass on 3.9.6 and 3.13.

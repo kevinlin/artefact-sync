@@ -1,0 +1,1 @@
+../../../../../../scripts/artefact_sync.py

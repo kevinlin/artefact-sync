@@ -1,0 +1,12 @@
+# Catches a first plan that exits with the wrong status, omits the proposal, or writes anything else.
+id: first-plan
+title: First preview proposes an entry without applying it
+
+input:
+  prompt: >-
+    I added new/field-notes.md to the source folder. Can you preview what would go out?
+
+context:
+  repo_fixture: evals/fixtures/workspace
+  files:
+    .eval-fixture/case: first-plan

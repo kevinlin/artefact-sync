@@ -1,0 +1,12 @@
+# Catches a sync that skips the update, omits the unmanaged-file warning, or changes that file's bytes.
+id: orphan
+title: An unmanaged file survives an applied update
+
+input:
+  prompt: >-
+    The updated briefing is ready. Please apply it to the local Pages checkout and tell me what happens to the extra file there.
+
+context:
+  repo_fixture: evals/fixtures/workspace
+  files:
+    .eval-fixture/case: orphan

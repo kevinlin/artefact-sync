@@ -1,0 +1,96 @@
+version: 2
+rules:
+  - id: PE3
+    path: tests/test_svg.py
+    reason: test feeds an XXE file:///etc/passwd entity to prove the SVG validator
+      rejects it; nothing is read
+  - id: PE3
+    path: tests/test_provider.py
+    reason: test asserts provider.fetch refuses a file:///etc/passwd URL; nothing is
+      read
+  - id: EA4
+    path: tests/test_provider.py
+    reason: test fetches 127.0.0.1:1 with a 0.5s timeout to prove an unreachable
+      host returns 0
+  - id: SSRF2
+    path: tests/test_provider.py
+    reason: test fetches 127.0.0.1:1 with a 0.5s timeout to prove an unreachable
+      host returns 0
+  - id: PE3
+    path: tests/test_init.py
+    reason: asserts the seeded ignore rules exclude .env files from publishing; no
+      credential is read
+  - id: PE3
+    path: tests/test_scan.py
+    reason: asserts the dotfile ignore rule excludes .env files from publishing; no
+      credential is read
+  - id: TM1
+    path: docs/specs/plan_artefact-sync-m2.md
+    reason: historical plan text that forbids git reset --hard; it names the command
+      to ban it
+  - id: TM1
+    path: docs/specs/m4-acceptance.md
+    reason: manual teardown notes for a human after an acceptance run; not loaded by
+      the skill
+  - id: AR2
+    path: docs/specs/plan_artefact-sync-m4.md
+    reason: historical plan prose about manifest versioning; no refusal-suppression
+      text
+  - id: RA2
+    path: docs/specs/plan_artefact-sync-m1.md
+    reason: historical plan naming a read-only prior-art path; no session persistence
+  - id: AS3
+    path: docs/specs/requirement_artefact-sync.md
+    reason: requirement doc states the skill's own install path; no skill enumeration
+  - id: AST4
+    path: scripts/manifest.py
+    reason: subprocess.run with a fixed argv list (git/gh or the fixture CLI), no
+      shell=True; no injection path
+  - id: AST4
+    path: scripts/provider.py
+    reason: subprocess.run with a fixed argv list (git/gh or the fixture CLI), no
+      shell=True; no injection path
+  - id: AST4
+    path: tests/helpers.py
+    reason: subprocess.run with a fixed argv list (git/gh or the fixture CLI), no
+      shell=True; no injection path
+  - id: AST4
+    path: tests/test_init.py
+    reason: subprocess.run with a fixed argv list (git/gh or the fixture CLI), no
+      shell=True; no injection path
+  - id: AST4
+    path: tests/test_m4_adoption.py
+    reason: subprocess.run with a fixed argv list (git/gh or the fixture CLI), no
+      shell=True; no injection path
+  - id: AST4
+    path: tests/test_provider.py
+    reason: subprocess.run with a fixed argv list (git/gh or the fixture CLI), no
+      shell=True; no injection path
+  - id: AST4
+    path: evals/fixtures/workspace/.eval-fixture/fixture.py
+    reason: subprocess.run with a fixed argv list (git/gh or the fixture CLI), no
+      shell=True; no injection path
+  - id: SC9
+    path: evals/fixtures/workspace/.eval-fixture/fixture.py
+    reason: eval fixture seeder and CLI logging shim; kept in a dot-directory so the
+      agent under test does not read it; never shipped to users
+  - id: AS3
+    path: evals/eval.yaml
+    reason: eval config installs the skill under test into the case's isolated home;
+      no enumeration of the user's skills
+  - id: LP1
+    path: scripts/cli.py
+    reason: runs only via python3, which allowed-tools Bash(python3:*) covers;
+      skillspector maps tool names by exact string and does not parse scoped
+      Bash(...) rules
+  - id: LP1
+    path: evals/fixtures/judge.py
+    reason: runs only via python3, which allowed-tools Bash(python3:*) covers;
+      skillspector maps tool names by exact string and does not parse scoped
+      Bash(...) rules
+  - id: LP1
+    path: evals/fixtures/workspace/.eval-fixture/fixture.py
+    reason: runs only via python3, which allowed-tools Bash(python3:*) covers;
+      skillspector maps tool names by exact string and does not parse scoped
+      Bash(...) rules
+fingerprints: []

@@ -1,0 +1,12 @@
+# Catches a plan that accepts an SVG script or blocks without naming the offending file, line, and SVG rule.
+id: invalid-svg
+title: An already-listed SVG is rejected with a line and reason
+
+input:
+  prompt: >-
+    I replaced diagrams/flow.svg in the source folder. Can you check whether this version is ready to go out?
+
+context:
+  repo_fixture: evals/fixtures/workspace
+  files:
+    .eval-fixture/case: invalid-svg

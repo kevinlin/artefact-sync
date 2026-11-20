@@ -1,0 +1,12 @@
+# Catches a plan that silently drops an unsupported suffix or adds its file to the manifest.
+id: unsupported-suffix
+title: An unsupported file is reported by suffix
+
+input:
+  prompt: >-
+    I put design.psd in the source folder. Will it be part of the next update?
+
+context:
+  repo_fixture: evals/fixtures/workspace
+  files:
+    .eval-fixture/case: unsupported-suffix

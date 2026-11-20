@@ -1,0 +1,65 @@
+# Selective coverage of eight SKILL.md claims about planning, applying, and publishing.
+schema_version: v1alpha1
+
+environment:
+  type: none
+  env:
+    CLAUDE_CONFIG_DIR: .eval-claude-config
+    HOME: .eval-home
+    BASH_ENV: .eval-bootstrap
+  setup_steps:
+    # 0.11.0 injects env values literally and runs setup before installing skills and fixtures.
+    # Each later Bash process starts at the workspace root. Seed once after fixtures arrive.
+    - run: |
+        set -eu
+        mkdir .eval-home .eval-claude-config
+        mkdir -p .eval-home/.claude/skills .eval-claude-config/projects
+        ln -s ../.eval-home/.claude/skills .eval-claude-config/skills
+        ln -s ../../.eval-claude-config/projects .eval-home/.claude/projects
+        cat > .eval-bootstrap <<'BOOTSTRAP'
+        eval_root="$(pwd -P)"
+        export HOME="$eval_root/.eval-home"
+        export CLAUDE_CONFIG_DIR="$eval_root/.eval-claude-config"
+        export XDG_CONFIG_HOME="$HOME/.config"
+        export PYTHONDONTWRITEBYTECODE=1
+        export GIT_CONFIG_NOSYSTEM=1 GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_COUNT=0
+        export GIT_ALLOW_PROTOCOL=''
+        unset GIT_DIR GIT_WORK_TREE GIT_INDEX_FILE GIT_COMMON_DIR GIT_CONFIG_PARAMETERS BASH_ENV
+        if [ -f .eval-fixture/case ] && [ ! -f .eval-ready ]; then
+          python3 .eval-fixture/fixture.py || exit $?
+        fi
+        BOOTSTRAP
+
+skills:
+  # Both variants get the same CLI and local fixture. Only the treatment gets SKILL.md.
+  - source: local_path
+    path: .
+    target: .eval-home/.claude/skills/artefact-sync
+    include: [SKILL.md]
+
+engine:
+  name: claude_code
+
+cases:
+  files:
+    - evals/cases/first-plan.yaml
+    - evals/cases/review-boundary.yaml
+    - evals/cases/frozen-destination.yaml
+    - evals/cases/secret-line.yaml
+    - evals/cases/unsupported-suffix.yaml
+    - evals/cases/orphan.yaml
+    - evals/cases/invalid-svg.yaml
+    - evals/cases/publish-warning.yaml
+  defaults:
+    timeout_seconds: 180
+    collect_artifacts:
+      - .eval-fixture/cli.jsonl
+      - .eval-fixture/before.json
+      - pages/artefacts/**
+
+judge:
+  type: script
+  script_path: evals/fixtures/judge.py
+
+benchmark:
+  enabled: true

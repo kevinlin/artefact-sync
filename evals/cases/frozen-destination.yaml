@@ -1,0 +1,12 @@
+# Catches an update that re-proposes published metadata, leaves stale content, or skips successful validation.
+id: frozen-destination
+title: A briefing update keeps its existing public path
+
+input:
+  prompt: >-
+    The updated briefing is ready. Please apply the new version to the local Pages checkout.
+
+context:
+  repo_fixture: evals/fixtures/workspace
+  files:
+    .eval-fixture/case: frozen-destination

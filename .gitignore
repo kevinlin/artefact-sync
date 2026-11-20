@@ -30,3 +30,5 @@ Thumbs.db
 .handoff/
 .partner/
 .claude/agents/
+*-workspace/
+.skillgantry-workspace/
