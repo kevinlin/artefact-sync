@@ -34,6 +34,8 @@ class Site:
     analytics_id: str
     catalogue_mode: str
     catalogue_page: PurePosixPath | None
+    # Hosts whose runtime loads are accepted, so they stop raising `external` warnings.
+    allowed_external_hosts: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -98,12 +100,20 @@ def site_from_dict(raw: dict) -> Site:
             raise ConfigError("site.catalogue.page must be a safe relative path")
     else:
         page_path = None
+    hosts = raw.get("allowed_external_hosts", [])
+    if not isinstance(hosts, list) or not all(
+        isinstance(h, str) and h and not any(c in h for c in "/:") for h in hosts
+    ):
+        raise ConfigError(
+            "site.allowed_external_hosts must be a list of bare hostnames like 'fonts.googleapis.com'"
+        )
     return Site(
         base_url=base_url,
         favicon=raw.get("favicon", DEFAULT_FAVICON),
         analytics_id=analytics_id,
         catalogue_mode=mode,
         catalogue_page=page_path,
+        allowed_external_hosts=tuple(h.lower() for h in hosts),
     )
 
 
@@ -111,12 +121,16 @@ def site_to_dict(site: Site) -> dict:
     catalogue: dict = {"mode": site.catalogue_mode}
     if site.catalogue_page is not None:
         catalogue["page"] = site.catalogue_page.as_posix()
-    return {
+    payload = {
         "base_url": site.base_url,
         "favicon": site.favicon,
         "analytics_id": site.analytics_id,
         "catalogue": catalogue,
     }
+    # Omitted when empty, so manifests that never set it are written back unchanged.
+    if site.allowed_external_hosts:
+        payload["allowed_external_hosts"] = list(site.allowed_external_hosts)
+    return payload
 
 
 def build_context(pointer: Pointer, site: Site) -> Context:

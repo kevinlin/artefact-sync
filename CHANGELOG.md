@@ -7,6 +7,19 @@ deviations, and the corrections each milestone applied back to the design.
 
 ---
 
+## Unreleased
+
+Fewer false warnings from `plan` and `validate`. 265 tests pass on 3.9.6 and 3.13.
+
+- `<link rel="preconnect">` and `dns-prefetch` no longer raise `external`: they open a connection and
+  fetch nothing. `preload` still warns.
+- The long-hex `secret` rule skips a hex run inside a URL path or after a `sha`/`hash`/`digest`
+  label, which are CDN file names, commit SHAs and checksums. A bare hex run still warns.
+- New optional `site.allowed_external_hosts`: hosts listed there stop raising `external`. Exact host
+  match. Omitted from the manifest when empty, so existing manifests do not change.
+
+---
+
 ## 1.2.0 — 2026-08-28
 
 Generated pages can carry a Google Analytics tag, configured once in the manifest. 254 tests pass on

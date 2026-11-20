@@ -29,11 +29,14 @@ The two-step proposal flow prevents a newly discovered file from becoming public
 `plan`, `sync` and `add` print warnings next to the change groups. None of them stop a run.
 
 - `secret`: a filename containing `prompt`, `draft`, `internal` or `client`, or a line matching an
-  API-key, AWS-key, GitHub-token or private-key shape. Read the named line before publishing.
+  API-key, AWS-key, GitHub-token or private-key shape, or a bare run of 40+ hex characters. A hex
+  run inside a URL path or straight after a `sha`/`hash`/`digest` label is a content address and is
+  not warned about. Read the named line before publishing.
 - `external`: a published HTML page fetches an off-site asset to render — a `<script src>`, a
   `<link href>` stylesheet or font, an image or iframe. Vendor it into `artefacts/vendor/` and add a
-  `replacements` entry if the page must keep working offline. Plain `<a href>` links out are not
-  warned about.
+  `replacements` entry if the page must keep working offline. Plain `<a href>` links out and
+  `<link rel="preconnect">` / `dns-prefetch` hints are not warned about, and neither is any host
+  listed in `site.allowed_external_hosts`.
 - `orphan`: a file in `artefacts/` belonging to no manifest entry. Never deleted, never rewritten.
 - `size`: a new public file over 10 MB.
 
@@ -77,7 +80,7 @@ it re-verifies the published URLs and reports.
 ```text
 {
   version,
-  site: {base_url, favicon, analytics_id, catalogue: {mode, page?}},
+  site: {base_url, favicon, analytics_id, catalogue: {mode, page?}, allowed_external_hosts?},
   protected_files,
   ignored_sources,
   collections: [{id, title, description?, section, section_order, order}],
@@ -93,6 +96,11 @@ this tool generates — synced HTML, rendered Markdown, and the standalone catal
 gtag snippet in its `<head>`. A page that already loads `googletagmanager.com` keeps its own tag.
 Leave `analytics_id` as `""` to publish without analytics. In `inject` catalogue mode the host page
 is yours, so add the tag to it yourself.
+
+`site.allowed_external_hosts` is a list of bare hostnames, such as `fonts.googleapis.com`, whose
+runtime loads are accepted rather than warned about. Use it for loads that degrade gracefully when
+they fail, such as web fonts. A host matches exactly, so subdomains need their own entry. The list is
+written to the manifest only when it is non-empty.
 
 Approved types are `.html`, `.md`, `.png`, `.jpeg`, `.jpg`, `.ico`, `.pdf`, `.webp`, `.gif`, and `.svg`. SVG files are validated and copied byte-for-byte, never sanitised or rewritten. Unsupported types are excluded. Approved but unlisted files block.
 

@@ -46,6 +46,26 @@ class SecretShapeTests(unittest.TestCase):
         text = "-----BEGIN RSA PRIVATE KEY-----\n"
         self.assertEqual(1, len(p.source_warnings(PurePosixPath("a.md"), text)))
 
+    def test_a_bare_long_hex_run_warns(self) -> None:
+        text = "token = " + "a1" * 20 + "\n"
+        self.assertEqual(1, len(p.source_warnings(PurePosixPath("a.md"), text)))
+
+    def test_a_hex_file_name_in_a_url_path_does_not_warn(self) -> None:
+        text = "https://www-cdn.example.com/d00db56fa754a1b115b6dd7cb2e3c342ee809620.pdf\n"
+        self.assertEqual([], p.source_warnings(PurePosixPath("a.md"), text))
+
+    def test_a_labelled_digest_does_not_warn(self) -> None:
+        for line in (
+            "<!-- result-sha:10e084620ca7a4c8c5d77183a7655eb8b59ab4b1 -->",
+            '{"sha256":"d961c8a50feee14aff05b1a12c0a44ad4e939dd5641f0e40d844b25d96b139c6"}',
+            "hash = 10e084620ca7a4c8c5d77183a7655eb8b59ab4b1",
+        ):
+            self.assertEqual([], p.source_warnings(PurePosixPath("a.md"), line + "\n"), line)
+
+    def test_a_bare_hex_run_warns_even_beside_a_labelled_one(self) -> None:
+        text = "sha:" + "b" * 40 + " key " + "c" * 40 + "\n"
+        self.assertEqual(1, len(p.source_warnings(PurePosixPath("a.md"), text)))
+
     def test_a_binary_source_is_never_read_for_secrets(self) -> None:
         self.assertEqual([], p.source_warnings(PurePosixPath("curve.png"), None))
 

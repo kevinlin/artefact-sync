@@ -108,12 +108,22 @@ def _svg_blocks(entry: Entry, data: bytes) -> list[Blocked]:
     return []
 
 
+_HEX_RUN = re.compile(r"\b[a-fA-F0-9]{40,}\b")
+# A digest in a URL path or straight after a sha/hash label is a content address
+# (a CDN file name, a commit, a checksum), not a credential.
+_HEX_ADDRESS = re.compile(r"(?:/|\b(?:sha\d*|hash|digest)[\"':=\s]*)$", re.I)
+
+
+def _bare_hex(line: str) -> bool:
+    return any(not _HEX_ADDRESS.search(line[: m.start()]) for m in _HEX_RUN.finditer(line))
+
+
 _SECRET_RULES = (
-    (re.compile(r"\bAKIA[0-9A-Z]{16}\b"), "looks like an AWS access key"),
-    (re.compile(r"\bsk-[A-Za-z0-9]{20,}\b"), "looks like an API key"),
-    (re.compile(r"-----BEGIN [A-Z ]*PRIVATE KEY-----"), "contains a private key"),
-    (re.compile(r"\bghp_[A-Za-z0-9]{36}\b"), "looks like a GitHub token"),
-    (re.compile(r"\b[a-fA-F0-9]{40,}\b"), "contains a long hexadecimal secret shape"),
+    (re.compile(r"\bAKIA[0-9A-Z]{16}\b").search, "looks like an AWS access key"),
+    (re.compile(r"\bsk-[A-Za-z0-9]{20,}\b").search, "looks like an API key"),
+    (re.compile(r"-----BEGIN [A-Z ]*PRIVATE KEY-----").search, "contains a private key"),
+    (re.compile(r"\bghp_[A-Za-z0-9]{36}\b").search, "looks like a GitHub token"),
+    (_bare_hex, "contains a long hexadecimal secret shape"),
 )
 # Word-boundary, not component-prefix: the shipped rule missed "Client Presentation.pdf",
 # "Internal Notes.html" and "q1-internal-review.md", which are the shapes a real folder holds.
@@ -136,8 +146,8 @@ def source_warnings(source: PurePosixPath, text: str | None) -> list[Note]:
     if text is None:
         return notes
     for number, line in enumerate(text.splitlines(), start=1):
-        for pattern, detail in _SECRET_RULES:
-            if pattern.search(line):
+        for matches, detail in _SECRET_RULES:
+            if matches(line):
                 notes.append(Note("secret", f"{label}:{number}", detail))
     return notes
 
@@ -161,7 +171,9 @@ def _source_notes(context: Context, manifest: Manifest, desired_files) -> list[N
             document = rendered.decode("utf-8")
         except UnicodeDecodeError:
             continue
-        for number, url in render.external_references(document):
+        for number, url in render.external_references(
+            document, context.site.allowed_external_hosts
+        ):
             notes.append(external_note(f"{entry.source}:{number}", url))
     return notes
 

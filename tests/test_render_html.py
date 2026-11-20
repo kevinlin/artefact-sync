@@ -112,3 +112,26 @@ class ExternalReferenceTests(unittest.TestCase):
     def test_a_stylesheet_link_is_a_fetched_asset(self) -> None:
         text = '<link rel="stylesheet" href="https://fonts.example/css2?family=X">\n'
         self.assertEqual(1, len(render.external_references(text)))
+
+    def test_a_connection_hint_fetches_nothing(self) -> None:
+        text = (
+            '<link rel="preconnect" href="https://fonts.example">\n'
+            '<link rel="dns-prefetch" href="https://cdn.example">\n'
+        )
+        self.assertEqual((), render.external_references(text))
+
+    def test_a_preload_still_counts_as_a_fetched_asset(self) -> None:
+        text = '<link rel="preload" as="font" href="https://fonts.example/a.woff2">\n'
+        self.assertEqual(1, len(render.external_references(text)))
+
+    def test_an_allowed_host_is_not_reported(self) -> None:
+        text = (
+            '<link rel="stylesheet" href="https://fonts.example/css2?family=X">\n'
+            '<script src="https://cdn.example/x.js"></script>\n'
+        )
+        found = render.external_references(text, ("fonts.example",))
+        self.assertEqual([(2, "https://cdn.example/x.js")], list(found))
+
+    def test_an_allowed_host_does_not_cover_its_subdomains(self) -> None:
+        text = '<script src="https://evil.fonts.example/x.js"></script>\n'
+        self.assertEqual(1, len(render.external_references(text, ("fonts.example",))))

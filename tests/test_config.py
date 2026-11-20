@@ -78,6 +78,26 @@ class SiteTests(unittest.TestCase):
         self.assertEqual(site, config.site_from_dict(config.site_to_dict(site)))
         self.assertEqual(PurePosixPath("index.html"), site.catalogue_page)
 
+    def test_allowed_external_hosts_round_trip(self) -> None:
+        site = config.site_from_dict(
+            {"base_url": "https://x.example/artefacts/",
+             "allowed_external_hosts": ["fonts.googleapis.com"]}
+        )
+        self.assertEqual(("fonts.googleapis.com",), site.allowed_external_hosts)
+        self.assertEqual(site, config.site_from_dict(config.site_to_dict(site)))
+
+    def test_an_empty_allowlist_stays_out_of_the_manifest(self) -> None:
+        # Writing an empty list would change every adopter's manifest.json on the next sync.
+        site = config.site_from_dict({"base_url": "https://x.example/artefacts/"})
+        self.assertNotIn("allowed_external_hosts", config.site_to_dict(site))
+
+    def test_an_allowed_host_must_be_a_bare_hostname(self) -> None:
+        for bad in ("https://fonts.googleapis.com", "fonts.googleapis.com/css2", "", 7):
+            with self.assertRaises(ConfigError):
+                config.site_from_dict(
+                    {"base_url": "https://x.example/artefacts/", "allowed_external_hosts": [bad]}
+                )
+
 
 class ContextTests(unittest.TestCase):
     def test_artefacts_root_hangs_off_the_repo_not_the_cwd(self) -> None:

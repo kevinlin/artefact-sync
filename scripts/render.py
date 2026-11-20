@@ -6,6 +6,7 @@ import re
 import string
 from html.parser import HTMLParser
 from pathlib import Path, PurePosixPath
+from urllib.parse import urlsplit
 
 from config import ASSETS, Context, Site
 from errors import TransformationError
@@ -24,6 +25,8 @@ ANALYTICS_HOST = "www.googletagmanager.com"
 _ASSET_SRC_TAGS = frozenset(
     {"script", "img", "iframe", "embed", "source", "video", "audio", "track", "input"}
 )
+# Resource hints open a connection and fetch nothing; `preload` does fetch, so it is not here.
+_CONNECTION_HINTS = frozenset({"preconnect", "dns-prefetch"})
 
 
 def normalise_source_text(source_bytes: bytes, label: str) -> str:
@@ -184,14 +187,19 @@ def transform_html(source_bytes: bytes, entry: Entry, site: Site) -> bytes:
 class _AssetCollector(HTMLParser):
     """Collect off-site URLs the browser fetches to render the page."""
 
-    def __init__(self) -> None:
+    def __init__(self, allowed_hosts: tuple[str, ...] = ()) -> None:
         super().__init__(convert_charrefs=True)
+        self.allowed_hosts = allowed_hosts
         self.found: list[tuple[int, str]] = []
 
     def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
         attribute = "href" if tag == "link" else "src" if tag in _ASSET_SRC_TAGS else None
         if attribute is None:
             return
+        if tag == "link":
+            rel = set((dict(attrs).get("rel") or "").lower().split())
+            if rel and rel <= _CONNECTION_HINTS:
+                return
         for name, value in attrs:
             if name.lower() != attribute or not value:
                 continue
@@ -202,11 +210,19 @@ class _AssetCollector(HTMLParser):
                 continue
             if ANALYTICS_HOST in url:  # the analytics tag is configured, not an unnoticed load
                 continue
+            try:
+                host = urlsplit(url).hostname
+            except ValueError:  # malformed authority, e.g. an unclosed "[": report it, don't crash
+                host = None
+            if host in self.allowed_hosts:
+                continue
             self.found.append((self.getpos()[0], url))
 
 
-def external_references(html_text: str) -> tuple[tuple[int, str], ...]:
-    collector = _AssetCollector()
+def external_references(
+    html_text: str, allowed_hosts: tuple[str, ...] = ()
+) -> tuple[tuple[int, str], ...]:
+    collector = _AssetCollector(allowed_hosts)
     try:
         collector.feed(html_text)
         collector.close()
