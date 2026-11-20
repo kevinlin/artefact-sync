@@ -7,7 +7,7 @@ deviations, and the corrections each milestone applied back to the design.
 
 ---
 
-## Unreleased
+## 1.2.1 — 2026-11-20
 
 Fewer false warnings from `plan` and `validate`. 265 tests pass on 3.9.6 and 3.13.
 
