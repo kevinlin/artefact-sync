@@ -7,7 +7,7 @@ deviations, and the corrections each milestone applied back to the design.
 
 ---
 
-## Unreleased
+## 1.2.2 — 2026-11-21
 
 - `SKILL.md`: after a blocked `plan`, the agent shows the proposed entries and stops until the user
   approves them. The old wording ("only after ... are acceptable") let an agent approve its own

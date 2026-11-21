@@ -3,7 +3,7 @@ name: artefact-sync
 description: One-way sync a local folder into the artefacts tree of a configured GitHub Pages repository. Use when planning, applying, or validating published artefacts while preserving existing public URLs.
 allowed-tools: Read, Bash(python3:*)
 metadata:
-  version: 1.2.1
+  version: 1.2.2
 ---
 
 # artefact-sync
